@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1045467121720",
+    "project_id": "mini-blog-app-3ff95",
+    "storage_bucket": "mini-blog-app-3ff95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1045467121720:android:9e57b8bc66741db12d7ecd",
+        "android_client_info": {
+          "package_name": "com.josiaskiesse17gmail.mini_blog_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByOtOOKfMr2TnEm1fVU8XkosZOR6A56Eo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -17,17 +17,11 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
@@ -54,7 +48,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'mini-blog-app-3ff95.firebasestorage.app',
     iosBundleId: 'com.josiaskiesse17gmail.miniBlogApp',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDw-wSBErtwmF-YF8XtMX3hFtezvD69P9w',
     appId: '1:1045467121720:ios:bad2f14b6769c2e72d7ecd',
@@ -70,6 +63,23 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1045467121720',
     projectId: 'mini-blog-app-3ff95',
     authDomain: 'mini-blog-app-3ff95.firebaseapp.com',
+    storageBucket: 'mini-blog-app-3ff95.firebasestorage.app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCh9O6evpcsEUpMlQ4_fu-GAby7wCho3jk',
+    appId: '1:1045467121720:web:847d82fc86d510c72d7ecd',
+    messagingSenderId: '1045467121720',
+    projectId: 'mini-blog-app-3ff95',
+    authDomain: 'mini-blog-app-3ff95.firebaseapp.com',
+    storageBucket: 'mini-blog-app-3ff95.firebasestorage.app',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyByOtOOKfMr2TnEm1fVU8XkosZOR6A56Eo',
+    appId: '1:1045467121720:android:9e57b8bc66741db12d7ecd',
+    messagingSenderId: '1045467121720',
+    projectId: 'mini-blog-app-3ff95',
     storageBucket: 'mini-blog-app-3ff95.firebasestorage.app',
   );
 }
