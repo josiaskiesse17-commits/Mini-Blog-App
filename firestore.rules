@@ -1,0 +1,198 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function articleKeysPresent() {
+      return request.resource.data.keys().hasOnly([
+        'title',
+        'content',
+        'authorId',
+        'authorName',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'publishedAt'
+      ]);
+    }
+
+    function isValidStatus(status) {
+      return status in ['draft', 'published'];
+    }
+
+    function validTitle(data) {
+      return data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 200;
+    }
+
+    function validContent(data) {
+      return data.content is string
+        && data.content.size() <= 100000
+        && (data.status == 'draft' || data.content.size() > 0);
+    }
+
+    function validAuthorName(data) {
+      return data.authorName is string
+        && data.authorName.size() > 0
+        && data.authorName.size() <= 80;
+    }
+
+    function validPublishedAtOnCreate(data) {
+      return (data.status == 'draft' && data.publishedAt == null)
+        || (data.status == 'published' && data.publishedAt == request.time);
+    }
+
+    function validPublishedAtOnUpdate(old, data) {
+      return (old.status == 'draft'
+          && data.status == 'draft'
+          && data.publishedAt == old.publishedAt)
+        || (old.status == 'draft'
+          && data.status == 'published'
+          && data.publishedAt == request.time)
+        || (old.status == 'published'
+          && data.status == 'published'
+          && data.publishedAt == old.publishedAt)
+        || (old.status == 'published'
+          && data.status == 'draft'
+          && data.publishedAt == old.publishedAt);
+    }
+
+    function validArticleCreate() {
+      let data = request.resource.data;
+      return articleKeysPresent()
+        && isOwner(data.authorId)
+        && validTitle(data)
+        && validContent(data)
+        && validAuthorName(data)
+        && isValidStatus(data.status)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time
+        && validPublishedAtOnCreate(data);
+    }
+
+    function validArticleUpdate() {
+      let data = request.resource.data;
+      let old = resource.data;
+      return articleKeysPresent()
+        && data.authorId == old.authorId
+        && data.createdAt == old.createdAt
+        && validTitle(data)
+        && validContent(data)
+        && validAuthorName(data)
+        && isValidStatus(data.status)
+        && data.updatedAt == request.time
+        && validPublishedAtOnUpdate(old, data);
+    }
+
+    function userKeysPresent() {
+      return request.resource.data.keys().hasOnly([
+        'displayName',
+        'photoUrl',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function validUserCreate() {
+      let data = request.resource.data;
+      return userKeysPresent()
+        && (data.displayName == null || data.displayName is string)
+        && (data.photoUrl == null || data.photoUrl is string)
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validUserUpdate() {
+      let data = request.resource.data;
+      let old = resource.data;
+      return userKeysPresent()
+        && data.createdAt == old.createdAt
+        && (data.displayName == null || data.displayName is string)
+        && (data.photoUrl == null || data.photoUrl is string)
+        && data.updatedAt == request.time;
+    }
+
+    match /articles/{articleId} {
+      allow get: if resource == null
+        || resource.data.status == 'published'
+        || isOwner(resource.data.authorId);
+
+      allow list: if resource.data.status == 'published'
+        || isOwner(resource.data.authorId);
+
+      allow create: if isSignedIn() && validArticleCreate();
+
+      allow update: if isSignedIn()
+        && isOwner(resource.data.authorId)
+        && validArticleUpdate();
+
+      allow delete: if isSignedIn() && isOwner(resource.data.authorId);
+
+      match /comments/{commentId} {
+        function parentArticle() {
+          return get(/databases/$(database)/documents/articles/$(articleId)).data;
+        }
+
+        function commentKeysPresent() {
+          return request.resource.data.keys().hasOnly([
+            'authorId',
+            'authorName',
+            'content',
+            'createdAt',
+            'updatedAt'
+          ]);
+        }
+
+        function validCommentWrite() {
+          let data = request.resource.data;
+          return commentKeysPresent()
+            && data.authorId is string
+            && data.authorName is string
+            && data.authorName.size() > 0
+            && data.authorName.size() <= 80
+            && data.content is string
+            && data.content.size() > 0
+            && data.content.size() <= 2000
+            && data.updatedAt == request.time;
+        }
+
+        allow get: if resource == null
+          || parentArticle().status == 'published'
+          || isOwner(parentArticle().authorId);
+
+        allow list: if parentArticle().status == 'published'
+          || isOwner(parentArticle().authorId);
+
+        allow create: if isSignedIn()
+          && exists(/databases/$(database)/documents/articles/$(articleId))
+          && parentArticle().status == 'published'
+          && request.auth.uid == request.resource.data.authorId
+          && validCommentWrite()
+          && request.resource.data.createdAt == request.time;
+
+        allow update: if isSignedIn()
+          && isOwner(resource.data.authorId)
+          && validCommentWrite()
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        allow delete: if isSignedIn() && isOwner(resource.data.authorId);
+      }
+    }
+
+    match /users/{userId} {
+      allow get: if resource == null || isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && validUserCreate();
+      allow update: if isOwner(userId) && validUserUpdate();
+      allow delete: if false;
+    }
+  }
+}
