@@ -15,3 +15,11 @@ class AuthFailure extends Failure {
 class CacheFailure extends Failure {
   const CacheFailure(super.message);
 }
+
+class PermissionDeniedFailure extends Failure {
+  const PermissionDeniedFailure(super.message);
+}
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure(super.message);
+}
