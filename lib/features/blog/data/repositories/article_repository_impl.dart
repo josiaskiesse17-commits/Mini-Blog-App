@@ -86,25 +86,35 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
   @override
   Future<Failure?> updateArticle(Article article) {
-    return _guardVoid(() => _remoteDataSource.updateArticle(article));
+    return _guardVoid(
+      () => _remoteDataSource.updateArticle(article),
+    );
   }
 
   @override
   Future<(String?, Failure?)> saveDraft(Article article) {
-    return _guard(() => _remoteDataSource.saveDraft(article));
+    return _guard(
+      () => _remoteDataSource.saveDraft(article),
+    );
   }
 
   @override
   Future<Failure?> publishArticle(String id) {
-    return _guardVoid(() => _remoteDataSource.publishArticle(id));
+    return _guardVoid(
+      () => _remoteDataSource.publishArticle(id),
+    );
   }
 
   @override
   Future<Failure?> deleteArticle(String id) {
-    return _guardVoid(() => _remoteDataSource.deleteArticle(id));
+    return _guardVoid(
+      () => _remoteDataSource.deleteArticle(id),
+    );
   }
 
-  Future<(T?, Failure?)> _guard<T>(Future<T> Function() action) async {
+  Future<(T?, Failure?)> _guard<T>(
+    Future<T> Function() action,
+  ) async {
     try {
       return (await action(), null);
     } on PermissionDeniedException catch (error) {
@@ -118,7 +128,9 @@ class ArticleRepositoryImpl implements ArticleRepository {
     }
   }
 
-  Future<Failure?> _guardVoid(Future<void> Function() action) async {
+  Future<Failure?> _guardVoid(
+    Future<void> Function() action,
+  ) async {
     final result = await _guard(action);
     return result.$2;
   }

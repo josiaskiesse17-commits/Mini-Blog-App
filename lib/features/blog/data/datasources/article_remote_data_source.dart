@@ -37,7 +37,7 @@ abstract class ArticleRemoteDataSource {
 
 class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   ArticleRemoteDataSourceImpl({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
@@ -47,15 +47,20 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   @override
   Future<String> createArticle(Article article) async {
     try {
-      final doc = article.id.isEmpty
-          ? _articles.doc()
-          : _articles.doc(article.id);
+      final doc =
+          article.id.isEmpty ? _articles.doc() : _articles.doc(article.id);
+
       final authorName = article.authorName.trim().isEmpty
           ? 'Utilisateur'
           : article.authorName.trim();
+
       final model = ArticleModel.fromEntity(
-        article.copyWith(id: doc.id, authorName: authorName),
+        article.copyWith(
+          id: doc.id,
+          authorName: authorName,
+        ),
       );
+
       await doc.set(model.toCreateMap());
       return doc.id;
     } on FirebaseException catch (error) {
@@ -67,9 +72,11 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   Future<ArticleModel> getArticle(String id) async {
     try {
       final snap = await _articles.doc(id).get();
+
       if (!snap.exists) {
         throw const NotFoundException('Article introuvable');
       }
+
       return ArticleModel.fromFirestore(snap);
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
@@ -78,21 +85,19 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 
   @override
   Stream<ArticleModel?> watchArticle(String id) {
-    return _articles
-        .doc(id)
-        .snapshots()
-        .map((snap) {
-          if (!snap.exists) {
-            return null;
-          }
-          return ArticleModel.fromFirestore(snap);
-        })
-        .handleError((Object error, StackTrace _) {
-          if (error is FirebaseException) {
-            throw _mapFirebaseException(error);
-          }
-          throw error;
-        });
+    return _articles.doc(id).snapshots().map((snap) {
+      if (!snap.exists) {
+        return null;
+      }
+
+      return ArticleModel.fromFirestore(snap);
+    }).handleError((Object error, StackTrace _) {
+      if (error is FirebaseException) {
+        throw _mapFirebaseException(error);
+      }
+
+      throw error;
+    });
   }
 
   @override
@@ -103,17 +108,36 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   }) async {
     try {
       Query<Map<String, dynamic>> query = _articles
-          .where('status', isEqualTo: ArticleStatus.published.name)
-          .orderBy('publishedAt', descending: true);
+          .where(
+            'status',
+            isEqualTo: ArticleStatus.published.name,
+          )
+          .orderBy(
+            'publishedAt',
+            descending: true,
+          );
 
       if (authorId != null) {
         query = _articles
-            .where('authorId', isEqualTo: authorId)
-            .where('status', isEqualTo: ArticleStatus.published.name)
-            .orderBy('publishedAt', descending: true);
+            .where(
+              'authorId',
+              isEqualTo: authorId,
+            )
+            .where(
+              'status',
+              isEqualTo: ArticleStatus.published.name,
+            )
+            .orderBy(
+              'publishedAt',
+              descending: true,
+            );
       }
 
-      return _paginate(query: query, cursor: cursor, limit: limit);
+      return _paginate(
+        query: query,
+        cursor: cursor,
+        limit: limit,
+      );
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
     }
@@ -128,17 +152,36 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   }) async {
     try {
       Query<Map<String, dynamic>> query = _articles
-          .where('authorId', isEqualTo: authorId)
-          .orderBy('createdAt', descending: true);
+          .where(
+            'authorId',
+            isEqualTo: authorId,
+          )
+          .orderBy(
+            'createdAt',
+            descending: true,
+          );
 
       if (status != null) {
         query = _articles
-            .where('authorId', isEqualTo: authorId)
-            .where('status', isEqualTo: status.name)
-            .orderBy('createdAt', descending: true);
+            .where(
+              'authorId',
+              isEqualTo: authorId,
+            )
+            .where(
+              'status',
+              isEqualTo: status.name,
+            )
+            .orderBy(
+              'createdAt',
+              descending: true,
+            );
       }
 
-      return _paginate(query: query, cursor: cursor, limit: limit);
+      return _paginate(
+        query: query,
+        cursor: cursor,
+        limit: limit,
+      );
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
     }
@@ -171,12 +214,23 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   Future<String> saveDraft(Article article) async {
     try {
       if (article.id.isEmpty) {
-        return createArticle(article.copyWith(status: ArticleStatus.draft));
+        return createArticle(
+          article.copyWith(
+            status: ArticleStatus.draft,
+          ),
+        );
       }
+
       final model = ArticleModel.fromEntity(
-        article.copyWith(status: ArticleStatus.draft),
+        article.copyWith(
+          status: ArticleStatus.draft,
+        ),
       );
-      await _articles.doc(article.id).update(model.toUpdateMap());
+
+      await _articles.doc(article.id).update(
+            model.toUpdateMap(),
+          );
+
       return article.id;
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
@@ -201,6 +255,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 
     if (cursor != null) {
       final cursorSnap = await _articles.doc(cursor.documentId).get();
+
       if (cursorSnap.exists) {
         pageQuery = pageQuery.startAfterDocument(cursorSnap);
       }
@@ -208,12 +263,14 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 
     final snapshot = await pageQuery.get();
     final docs = snapshot.docs;
+
     final hasMore = docs.length > limit;
     final pageDocs = hasMore ? docs.sublist(0, limit) : docs;
 
     return ArticlePage(
       items: pageDocs.map(ArticleModel.fromFirestore).toList(),
-      nextCursor: hasMore ? ArticlePageCursor(pageDocs.last.id) : null,
+      nextCursor:
+          hasMore ? ArticlePageCursor(pageDocs.last.id) : null,
     );
   }
 }
@@ -221,10 +278,16 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 Exception _mapFirebaseException(FirebaseException error) {
   switch (error.code) {
     case 'permission-denied':
-      return PermissionDeniedException(error.message ?? 'Permission refusée');
+      return PermissionDeniedException(
+        error.message ?? 'Permission refusée',
+      );
     case 'not-found':
-      return NotFoundException(error.message ?? 'Document introuvable');
+      return NotFoundException(
+        error.message ?? 'Document introuvable',
+      );
     default:
-      return ServerException(error.message ?? error.code);
+      return ServerException(
+        error.message ?? error.code,
+      );
   }
 }

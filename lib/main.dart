@@ -11,11 +11,18 @@ import 'features/auth/data/user_profile_sync.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await connectFirestoreEmulatorIfEnabled();
   startUserProfileSync();
 
-  runApp(const ProviderScope(child: MiniBlogApp()));
+  runApp(
+    const ProviderScope(
+      child: MiniBlogApp(),
+    ),
+  );
 }
 
 class MiniBlogApp extends StatelessWidget {

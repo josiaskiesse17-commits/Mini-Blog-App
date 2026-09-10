@@ -31,6 +31,7 @@ class ArticleModel extends Article {
 
   factory ArticleModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
+
     if (data == null) {
       throw StateError('Document article ${doc.id} sans données');
     }
@@ -41,7 +42,9 @@ class ArticleModel extends Article {
       content: data['content'] as String? ?? '',
       authorId: data['authorId'] as String? ?? '',
       authorName: data['authorName'] as String? ?? '',
-      status: ArticleStatus.fromName(data['status'] as String? ?? 'draft'),
+      status: ArticleStatus.fromName(
+        data['status'] as String? ?? 'draft',
+      ),
       createdAt: _toDate(data['createdAt']),
       updatedAt: _toDate(data['updatedAt']),
       publishedAt: _toDateOrNull(data['publishedAt']),
@@ -80,17 +83,23 @@ class ArticleModel extends Article {
     if (value is Timestamp) {
       return value.toDate();
     }
+
     if (value is DateTime) {
       return value;
     }
+
     // serverTimestamp pas encore résolu sur un snapshot local.
-    return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    return DateTime.fromMillisecondsSinceEpoch(
+      0,
+      isUtc: true,
+    );
   }
 
   static DateTime? _toDateOrNull(dynamic value) {
     if (value == null) {
       return null;
     }
+
     return _toDate(value);
   }
 }
