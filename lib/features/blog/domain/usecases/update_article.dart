@@ -1,13 +1,13 @@
-import 'package:mini_blog_app/core/errors/failures.dart';
+import '../../../../core/errors/failures.dart';
 import '../entities/article.dart';
 import '../repositories/article_repository.dart';
 
 class UpdateArticle {
-  final ArticleRepository repository;
+  const UpdateArticle(this._repository);
 
-  UpdateArticle(this.repository);
+  final ArticleRepository _repository;
 
-  Future<Failure?> call(Article article) async {
-    return await repository.updateArticle(article);
+  Future<Failure?> call(Article article) {
+    return _repository.updateArticle(article);
   }
 }

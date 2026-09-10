@@ -1,12 +1,12 @@
-import 'package:mini_blog_app/core/errors/failures.dart';
+import '../../../../core/errors/failures.dart';
 import '../repositories/article_repository.dart';
 
 class DeleteArticle {
-  final ArticleRepository repository;
+  const DeleteArticle(this._repository);
 
-  DeleteArticle(this.repository);
+  final ArticleRepository _repository;
 
-  Future<Failure?> call(String id) async {
-    return await repository.deleteArticle(id);
+  Future<Failure?> call(String id) {
+    return _repository.deleteArticle(id);
   }
 }
