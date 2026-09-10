@@ -45,7 +45,6 @@ class DefaultFirebaseOptions {
     storageBucket: 'mini-blog-app-3ff95.firebasestorage.app',
     iosBundleId: 'com.josiaskiesse17gmail.miniBlogApp',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDw-wSBErtwmF-YF8XtMX3hFtezvD69P9w',
     appId: '1:1045467121720:ios:bad2f14b6769c2e72d7ecd',
