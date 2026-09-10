@@ -61,7 +61,7 @@ service cloud.firestore {
           && data.publishedAt == old.publishedAt)
         || (old.status == 'published'
           && data.status == 'draft'
-          && data.publishedAt == old.publishedAt);
+          && data.publishedAt == null);
     }
 
     function validArticleCreate() {

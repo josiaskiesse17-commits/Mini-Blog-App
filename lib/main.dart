@@ -16,7 +16,6 @@ Future<void> main() async {
   );
 
   await connectFirestoreEmulatorIfEnabled();
-  startUserProfileSync();
 
   runApp(
     const ProviderScope(
@@ -25,15 +24,17 @@ Future<void> main() async {
   );
 }
 
-class MiniBlogApp extends StatelessWidget {
+class MiniBlogApp extends ConsumerWidget {
   const MiniBlogApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(userProfileSyncProvider);
+
     return MaterialApp.router(
       title: 'MiniBlog',
       theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }

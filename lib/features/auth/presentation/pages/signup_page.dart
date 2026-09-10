@@ -15,6 +15,7 @@ class SignupPage extends ConsumerStatefulWidget {
 class _SignupPageState extends ConsumerState<SignupPage> {
   final _formKey = GlobalKey<FormState>();
 
+  final displayNameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final verifyPasswordController = TextEditingController();
@@ -27,6 +28,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     await ref.read(authNotifierProvider.notifier).signUp(
           email: emailController.text.trim(),
           password: passwordController.text,
+          displayName: displayNameController.text.trim(),
         );
 
     if (!mounted) return;
@@ -46,6 +48,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
   @override
   void dispose() {
+    displayNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
     verifyPasswordController.dispose();
@@ -67,6 +70,20 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             key: _formKey,
             child: Column(
               children: [
+                AuthField(
+                  controller: displayNameController,
+                  label: 'Nom d\'affichage',
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Veuillez saisir votre nom';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
                 AuthField(
                   controller: emailController,
                   label: 'Email',

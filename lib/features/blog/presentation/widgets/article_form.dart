@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_constants.dart';
+
 class ArticleForm extends StatefulWidget {
   final String? initialTitle;
   final String? initialContent;
-  final void Function(String title, String content) onSubmit;
+  final Future<void> Function(String title, String content) onSubmit;
   final bool isLoading;
 
   const ArticleForm({
@@ -37,9 +39,9 @@ class _ArticleFormState extends State<ArticleForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      widget.onSubmit(
+      await widget.onSubmit(
         _titleController.text.trim(),
         _contentController.text.trim(),
       );
@@ -59,10 +61,18 @@ class _ArticleFormState extends State<ArticleForm> {
               labelText: 'Titre de l\'article',
               border: OutlineInputBorder(),
             ),
+            maxLength: AppConstants.articleTitleMaxLength,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer un titre';
               }
+
+              if (value.trim().length >
+                  AppConstants.articleTitleMaxLength) {
+                return 'Le titre ne peut pas dépasser '
+                    '${AppConstants.articleTitleMaxLength} caractères';
+              }
+
               return null;
             },
           ),
@@ -73,11 +83,19 @@ class _ArticleFormState extends State<ArticleForm> {
               labelText: 'Contenu',
               border: OutlineInputBorder(),
             ),
-            maxLines: 8, 
+            maxLines: 8,
+            maxLength: AppConstants.articleContentMaxLength,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Veuillez entrer du contenu';
               }
+
+              if (value.trim().length >
+                  AppConstants.articleContentMaxLength) {
+                return 'Le contenu ne peut pas dépasser '
+                    '${AppConstants.articleContentMaxLength} caractères';
+              }
+
               return null;
             },
           ),
@@ -90,7 +108,9 @@ class _ArticleFormState extends State<ArticleForm> {
             child: widget.isLoading
                 ? const CircularProgressIndicator()
                 : Text(
-                    widget.initialTitle != null ? 'Modifier l\'article' : 'Créer l\'article',
+                    widget.initialTitle != null
+                        ? 'Modifier l\'article'
+                        : 'Créer l\'article',
                     style: const TextStyle(fontSize: 16),
                   ),
           ),

@@ -8,9 +8,7 @@ import '../models/article_model.dart';
 
 abstract class ArticleRemoteDataSource {
   Future<String> createArticle(Article article);
-
   Future<ArticleModel> getArticle(String id);
-
   Stream<ArticleModel?> watchArticle(String id);
 
   Future<ArticlePage> getPublishedArticles({
@@ -27,11 +25,8 @@ abstract class ArticleRemoteDataSource {
   });
 
   Future<void> updateArticle(Article article);
-
   Future<void> publishArticle(String id);
-
   Future<String> saveDraft(Article article);
-
   Future<void> deleteArticle(String id);
 }
 
@@ -133,7 +128,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
             );
       }
 
-      return _paginate(
+      return await _paginate(
         query: query,
         cursor: cursor,
         limit: limit,
@@ -177,7 +172,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
             );
       }
 
-      return _paginate(
+      return await _paginate(
         query: query,
         cursor: cursor,
         limit: limit,
@@ -191,7 +186,10 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   Future<void> updateArticle(Article article) async {
     try {
       final model = ArticleModel.fromEntity(article);
-      await _articles.doc(article.id).update(model.toUpdateMap());
+
+      await _articles.doc(article.id).update(
+            model.toUpdateMap(),
+          );
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
     }
@@ -214,7 +212,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   Future<String> saveDraft(Article article) async {
     try {
       if (article.id.isEmpty) {
-        return createArticle(
+        return await createArticle(
           article.copyWith(
             status: ArticleStatus.draft,
           ),
@@ -224,11 +222,14 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final model = ArticleModel.fromEntity(
         article.copyWith(
           status: ArticleStatus.draft,
+          clearPublishedAt: true,
         ),
       );
 
       await _articles.doc(article.id).update(
-            model.toUpdateMap(),
+            model.toUpdateMap(
+              clearingPublishedAt: true,
+            ),
           );
 
       return article.id;

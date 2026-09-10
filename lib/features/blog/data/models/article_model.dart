@@ -67,8 +67,12 @@ class ArticleModel extends Article {
     };
   }
 
-  /// Champs mutables uniquement. Ne jamais envoyer [authorId] ni [createdAt].
-  Map<String, dynamic> toUpdateMap({bool publishing = false}) {
+  /// Champs mutables uniquement.
+  /// Ne jamais envoyer [authorId] ni [createdAt].
+  Map<String, dynamic> toUpdateMap({
+    bool publishing = false,
+    bool clearingPublishedAt = false,
+  }) {
     return {
       'title': title,
       'content': content,
@@ -76,30 +80,18 @@ class ArticleModel extends Article {
       'status': status.name,
       'updatedAt': FieldValue.serverTimestamp(),
       if (publishing) 'publishedAt': FieldValue.serverTimestamp(),
+      if (clearingPublishedAt) 'publishedAt': null,
     };
   }
 
   static DateTime _toDate(dynamic value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    }
-
-    if (value is DateTime) {
-      return value;
-    }
-
-    // serverTimestamp pas encore résolu sur un snapshot local.
-    return DateTime.fromMillisecondsSinceEpoch(
-      0,
-      isUtc: true,
-    );
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 
   static DateTime? _toDateOrNull(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
+    if (value == null) return null;
     return _toDate(value);
   }
 }

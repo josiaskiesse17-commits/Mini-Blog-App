@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/article.dart';
-import '../providers/article_provider.dart';
+import '../providers/article_notifier.dart';
 import '../widgets/article_form.dart';
 
-class CreateArticlePage extends StatelessWidget {
+class CreateArticlePage extends ConsumerWidget {
   const CreateArticlePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<ArticleProvider>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final articleState = ref.watch(articleNotifierProvider);
+    final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -19,35 +22,62 @@ class CreateArticlePage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: ArticleForm(
-            isLoading: provider.isLoading,
+            isLoading: articleState.isLoading,
             onSubmit: (title, content) async {
-              // Construction du nouvel article
-              final newArticle = Article(
-                id: DateTime.now().millisecondsSinceEpoch.toString(), // Identifiant temporaire en attendant Firestore
-                title: title,
-                content: content,
-                authorId: 'temp_user_id', // Sera remplacé plus tard par l'utilisateur connecté via la branche Auth
-                authorName: 'Auteur',      // Sera remplacé plus tard via Auth
-                createdAt: DateTime.now(),
-              );
+              final user = authState.value;
 
-              // Appel au Provider pour déclencher le UseCase CreateArticle
-              final success = await context.read<ArticleProvider>().createArticle(newArticle);
-
-              if (context.mounted) {
-                if (success) {
+              if (user == null) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Article créé avec succès !')),
-                  );
-                  Navigator.of(context).pop(); // Ferme la page après la création
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(provider.errorMessage ?? 'Erreur lors de la création'),
-                      backgroundColor: Colors.red,
+                    const SnackBar(
+                      content: Text(
+                        'Vous devez être connecté pour créer un article.',
+                      ),
                     ),
                   );
                 }
+                return;
+              }
+
+              final now = DateTime.now();
+
+              final newArticle = Article(
+                id: '',
+                title: title,
+                content: content,
+                authorId: user.uid,
+                authorName: user.displayName ?? 'Utilisateur',
+                status: ArticleStatus.draft,
+                createdAt: now,
+                updatedAt: now,
+              );
+
+              final success = await ref
+                  .read(articleNotifierProvider.notifier)
+                  .createArticle(newArticle);
+
+              if (!context.mounted) {
+                return;
+              }
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Article créé avec succès !'),
+                  ),
+                );
+                Navigator.of(context).pop();
+              } else {
+                final errorMessage =
+                    ref.read(articleNotifierProvider).errorMessage ??
+                    'Erreur lors de la création';
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(errorMessage),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
           ),
