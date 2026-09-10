@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/firebase/firebase_providers.dart';
 
 import '../../domain/repositories/comment_repository.dart';
 import '../datasources/comment_remote_data_source.dart';
 import '../repositories/comment_repository_impl.dart';
-import 'article_repository_provider.dart';
 
 final commentRemoteDataSourceProvider = Provider<CommentRemoteDataSource>((
   ref,
