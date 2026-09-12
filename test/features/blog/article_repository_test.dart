@@ -2,6 +2,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_blog_app/core/errors/exceptions.dart';
 import 'package:mini_blog_app/core/errors/failures.dart';
+import 'package:mini_blog_app/features/blog/data/datasources/article_local_data_source.dart';
 import 'package:mini_blog_app/features/blog/data/datasources/article_remote_data_source.dart';
 import 'package:mini_blog_app/features/blog/data/models/article_model.dart';
 import 'package:mini_blog_app/features/blog/data/repositories/article_repository_impl.dart';
@@ -11,6 +12,7 @@ import 'package:mini_blog_app/features/blog/domain/repositories/article_reposito
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FakeArticleLocalDataSource localDataSource;
   late ArticleRepository repository;
 
   Article draft({
@@ -35,8 +37,10 @@ void main() {
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
+    localDataSource = FakeArticleLocalDataSource();
     repository = ArticleRepositoryImpl(
       ArticleRemoteDataSourceImpl(firestore: firestore),
+      localDataSource,
     );
   });
 
@@ -168,12 +172,285 @@ void main() {
 
   group('erreurs', () {
     test('PermissionDeniedException devient PermissionDeniedFailure', () async {
-      final repo = ArticleRepositoryImpl(_ThrowingDataSource());
+      final repo = ArticleRepositoryImpl(
+        _ThrowingDataSource(),
+        FakeArticleLocalDataSource(),
+      );
       final failure = await repo.deleteArticle('x');
       expect(failure, isA<PermissionDeniedFailure>());
       expect(failure!.message, 'interdit');
     });
   });
+
+  group('cache local (repli hors-ligne)', () {
+    test('getArticle met en cache le résultat distant', () async {
+      final (id, _) = await repository.createArticle(draft());
+      await repository.getArticle(id!);
+
+      final cached = await localDataSource.getCachedArticle(id);
+      expect(cached, isNotNull);
+      expect(cached!.title, 'Mon article');
+    });
+
+    test('getArticle retombe sur le cache quand Firestore échoue', () async {
+      final cachedArticle = ArticleModel(
+        id: 'offline-1',
+        title: 'Article hors-ligne',
+        content: 'Contenu local',
+        authorId: 'uid-alice',
+        authorName: 'Alice',
+        status: ArticleStatus.draft,
+        createdAt: DateTime.utc(2026, 9, 8),
+        updatedAt: DateTime.utc(2026, 9, 8),
+      );
+      await localDataSource.cacheArticle(cachedArticle);
+
+      final repo = ArticleRepositoryImpl(
+        _ServerErrorDataSource(),
+        localDataSource,
+      );
+
+      final (article, failure) = await repo.getArticle('offline-1');
+      expect(failure, isNull);
+      expect(article, isNotNull);
+      expect(article!.title, 'Article hors-ligne');
+    });
+
+    test(
+      'getArticle ne retombe pas sur le cache pour une erreur métier',
+      () async {
+        await localDataSource.cacheArticle(
+          ArticleModel(
+            id: 'x',
+            title: 'Ne doit pas être retourné',
+            content: 'Contenu',
+            authorId: 'uid-alice',
+            authorName: 'Alice',
+            status: ArticleStatus.draft,
+            createdAt: DateTime.utc(2026, 9, 8),
+            updatedAt: DateTime.utc(2026, 9, 8),
+          ),
+        );
+        final repo = ArticleRepositoryImpl(
+          _PermissionDeniedDataSource(),
+          localDataSource,
+        );
+
+        final (article, failure) = await repo.getArticle('x');
+        expect(article, isNull);
+        expect(failure, isA<PermissionDeniedFailure>());
+      },
+    );
+
+    test(
+      'getArticle retourne ServerFailure si Firestore échoue et rien en cache',
+      () async {
+        final repo = ArticleRepositoryImpl(
+          _ServerErrorDataSource(),
+          localDataSource,
+        );
+
+        final (article, failure) = await repo.getArticle('inconnu');
+        expect(article, isNull);
+        expect(failure, isA<ServerFailure>());
+      },
+    );
+
+    test(
+      'getPublishedArticles retombe sur le cache filtré quand Firestore échoue',
+      () async {
+        await localDataSource.cacheArticles([
+          ArticleModel(
+            id: 'p1',
+            title: 'Publié',
+            content: 'Contenu',
+            authorId: 'uid-alice',
+            authorName: 'Alice',
+            status: ArticleStatus.published,
+            createdAt: DateTime.utc(2026, 9, 1),
+            updatedAt: DateTime.utc(2026, 9, 1),
+            publishedAt: DateTime.utc(2026, 9, 1),
+          ),
+          ArticleModel(
+            id: 'd1',
+            title: 'Brouillon',
+            content: 'Contenu',
+            authorId: 'uid-alice',
+            authorName: 'Alice',
+            status: ArticleStatus.draft,
+            createdAt: DateTime.utc(2026, 9, 1),
+            updatedAt: DateTime.utc(2026, 9, 1),
+          ),
+        ]);
+
+        final repo = ArticleRepositoryImpl(
+          _ServerErrorDataSource(),
+          localDataSource,
+        );
+
+        final (page, failure) = await repo.getPublishedArticles();
+        expect(failure, isNull);
+        expect(page!.items, hasLength(1));
+        expect(page.items.first.title, 'Publié');
+        expect(page.hasMore, isFalse);
+      },
+    );
+
+    test(
+      'getPublishedArticles avec un curseur ne retombe pas sur le cache',
+      () async {
+        final repo = ArticleRepositoryImpl(
+          _ServerErrorDataSource(),
+          localDataSource,
+        );
+
+        final (page, failure) = await repo.getPublishedArticles(
+          cursor: const ArticlePageCursor('doc-1'),
+        );
+        expect(page, isNull);
+        expect(failure, isA<ServerFailure>());
+      },
+    );
+
+    test(
+      'getMyArticles met en cache les résultats et retombe dessus hors-ligne',
+      () async {
+        await repository.createArticle(draft(title: 'Article A'));
+        await repository.createArticle(draft(title: 'Article B'));
+
+        await repository.getMyArticles(authorId: 'uid-alice');
+        final cached = await localDataSource.getCachedArticles();
+        expect(cached, hasLength(2));
+
+        final repo = ArticleRepositoryImpl(
+          _ServerErrorDataSource(),
+          localDataSource,
+        );
+        final (page, failure) = await repo.getMyArticles(
+          authorId: 'uid-alice',
+        );
+        expect(failure, isNull);
+        expect(page!.items, hasLength(2));
+      },
+    );
+  });
+}
+
+class FakeArticleLocalDataSource implements ArticleLocalDataSource {
+  final Map<String, ArticleModel> _store = {};
+
+  @override
+  Future<void> cacheArticles(List<ArticleModel> articles) async {
+    for (final article in articles) {
+      _store[article.id] = article;
+    }
+  }
+
+  @override
+  Future<List<ArticleModel>> getCachedArticles() async {
+    final articles = _store.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return articles;
+  }
+
+  @override
+  Future<void> cacheArticle(ArticleModel article) async {
+    _store[article.id] = article;
+  }
+
+  @override
+  Future<ArticleModel?> getCachedArticle(String id) async {
+    return _store[id];
+  }
+
+  @override
+  Future<void> clearCache() async {
+    _store.clear();
+  }
+}
+
+class _ServerErrorDataSource implements ArticleRemoteDataSource {
+  @override
+  Future<String> createArticle(Article article) => throw UnimplementedError();
+
+  @override
+  Future<ArticleModel> getArticle(String id) {
+    throw const ServerException('indisponible');
+  }
+
+  @override
+  Stream<ArticleModel?> watchArticle(String id) => throw UnimplementedError();
+
+  @override
+  Future<ArticlePage> getPublishedArticles({
+    String? authorId,
+    ArticlePageCursor? cursor,
+    required int limit,
+  }) {
+    throw const ServerException('indisponible');
+  }
+
+  @override
+  Future<ArticlePage> getMyArticles({
+    required String authorId,
+    ArticleStatus? status,
+    ArticlePageCursor? cursor,
+    required int limit,
+  }) {
+    throw const ServerException('indisponible');
+  }
+
+  @override
+  Future<void> updateArticle(Article article) => throw UnimplementedError();
+
+  @override
+  Future<void> publishArticle(String id) => throw UnimplementedError();
+
+  @override
+  Future<String> saveDraft(Article article) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteArticle(String id) => throw UnimplementedError();
+}
+
+class _PermissionDeniedDataSource implements ArticleRemoteDataSource {
+  @override
+  Future<String> createArticle(Article article) => throw UnimplementedError();
+
+  @override
+  Future<ArticleModel> getArticle(String id) {
+    throw const PermissionDeniedException('interdit');
+  }
+
+  @override
+  Stream<ArticleModel?> watchArticle(String id) => throw UnimplementedError();
+
+  @override
+  Future<ArticlePage> getPublishedArticles({
+    String? authorId,
+    ArticlePageCursor? cursor,
+    required int limit,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ArticlePage> getMyArticles({
+    required String authorId,
+    ArticleStatus? status,
+    ArticlePageCursor? cursor,
+    required int limit,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> updateArticle(Article article) => throw UnimplementedError();
+
+  @override
+  Future<void> publishArticle(String id) => throw UnimplementedError();
+
+  @override
+  Future<String> saveDraft(Article article) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteArticle(String id) => throw UnimplementedError();
 }
 
 class _ThrowingDataSource implements ArticleRemoteDataSource {
