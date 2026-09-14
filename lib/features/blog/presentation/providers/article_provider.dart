@@ -31,12 +31,11 @@ class ArticleProvider extends ChangeNotifier {
     notifyListeners();
 
     final result = await getArticlesUseCase();
-    
-    
+
     final (fetchedArticles, failure) = result;
 
     if (failure != null) {
-      errorMessage = failure.message; 
+      errorMessage = failure.message;
     } else if (fetchedArticles != null) {
       articles = fetchedArticles;
     }
@@ -54,11 +53,9 @@ class ArticleProvider extends ChangeNotifier {
     final failure = await createArticleUseCase(article);
 
     isLoading = false;
-    if (failure != null) {
-      errorMessage = failure.message;
-      notifyListeners();
-      return false;
-    }
+    errorMessage = failure.message;
+    notifyListeners();
+    return false;
 
     await fetchArticles();
     return true;
