@@ -57,10 +57,23 @@ class _ArticleFormState extends State<ArticleForm> {
         children: [
           TextFormField(
             controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Titre de l\'article',
-              border: OutlineInputBorder(),
-            ),
+            decoration: InputDecoration(
+  labelText: 'Titre de l\'article',
+  prefixIcon: const Icon(Icons.title_outlined),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: Theme.of(context).colorScheme.primary,
+      width: 2,
+    ),
+  ),
+),
             maxLength: AppConstants.articleTitleMaxLength,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -79,10 +92,24 @@ class _ArticleFormState extends State<ArticleForm> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _contentController,
-            decoration: const InputDecoration(
-              labelText: 'Contenu',
-              border: OutlineInputBorder(),
-            ),
+            decoration: InputDecoration(
+  labelText: 'Contenu',
+  prefixIcon: const Icon(Icons.article_outlined),
+  alignLabelWithHint: true,
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: Theme.of(context).colorScheme.primary,
+      width: 2,
+    ),
+  ),
+),
             maxLines: 8,
             maxLength: AppConstants.articleContentMaxLength,
             validator: (value) {
@@ -100,20 +127,49 @@ class _ArticleFormState extends State<ArticleForm> {
             },
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: widget.isLoading ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+          SizedBox(
+  width: double.infinity,
+  height: 52,
+  child: DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary,
+          Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: ElevatedButton(
+      onPressed: widget.isLoading ? null : _submit,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: widget.isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              widget.initialTitle != null
+                  ? 'Modifier l\'article'
+                  : 'Créer l\'article',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            child: widget.isLoading
-                ? const CircularProgressIndicator()
-                : Text(
-                    widget.initialTitle != null
-                        ? 'Modifier l\'article'
-                        : 'Créer l\'article',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-          ),
+    ),
+  ),
+),
         ],
       ),
     );

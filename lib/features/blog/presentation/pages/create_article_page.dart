@@ -18,9 +18,13 @@ class CreateArticlePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Créer un article'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+      body: Center(
+  child: SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: 700,
+      ),
           child: ArticleForm(
             isLoading: articleState.isLoading,
             onSubmit: (title, content) async {
@@ -82,6 +86,7 @@ class CreateArticlePage extends ConsumerWidget {
             },
           ),
         ),
+      ),
       ),
     );
   }

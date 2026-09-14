@@ -16,6 +16,8 @@ class ArticleDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(articleRepositoryProvider);
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,7 +57,7 @@ class ArticleDetailPage extends ConsumerWidget {
           if (failure != null) {
             return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 child: Text(
                   failure.message,
                   textAlign: TextAlign.center,
@@ -71,105 +73,186 @@ class ArticleDetailPage extends ConsumerWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  article.title,
-                  style: Theme.of(context).textTheme.headlineMedium,
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 800,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Par ${article.authorName}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  article.content,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 40),
-
-                // Boutons d'action : Modifier et Supprimer
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => EditArticlePage(article: article),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          article.title,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Modifier'),
-                    ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () async {
-                        // Boîte de dialogue de confirmation
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Supprimer l\'article'),
-                            content: const Text(
-                              'Êtes-vous sûr de vouloir supprimer cet article ?',
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 20,
+                              color: primaryColor,
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Annuler'),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Par ${article.authorName}',
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium,
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  'Supprimer',
-                                  style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        Divider(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        Text(
+                          article.content,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            height: 1.6,
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        Center(
+                          child: Wrap(
+                            spacing: 16,
+                            runSpacing: 12,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => EditArticlePage(
+                                        article: article,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.edit_outlined),
+                                label: const Text('Modifier'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text(
+                                        'Supprimer l\'article',
+                                      ),
+                                      content: const Text(
+                                        'Êtes-vous sûr de vouloir supprimer '
+                                        'cet article ?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Annuler'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text(
+                                            'Supprimer',
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true && context.mounted) {
+                                    final success = await ref
+                                        .read(
+                                          articleNotifierProvider.notifier,
+                                        )
+                                        .deleteArticle(article.id);
+
+                                    if (context.mounted) {
+                                      if (success) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Article supprimé avec succès',
+                                            ),
+                                          ),
+                                        );
+                                        Navigator.of(context).pop();
+                                      } else {
+                                        final errorMessage = ref
+                                                .read(
+                                                  articleNotifierProvider,
+                                                )
+                                                .errorMessage ??
+                                            'Erreur lors de la suppression';
+
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(errorMessage),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Supprimer'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        );
-
-                        if (confirm == true && context.mounted) {
-                          final success = await ref
-                              .read(articleNotifierProvider.notifier)
-                              .deleteArticle(article.id);
-
-                          if (context.mounted) {
-                            if (success) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Article supprimé avec succès'),
-                                ),
-                              );
-                              Navigator.of(context).pop(); // Retour à la liste
-                            } else {
-                              final errorMessage = ref
-                                      .read(articleNotifierProvider)
-                                      .errorMessage ??
-                                  'Erreur lors de la suppression';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(errorMessage),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Supprimer'),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ],
+              ),
             ),
           );
         },

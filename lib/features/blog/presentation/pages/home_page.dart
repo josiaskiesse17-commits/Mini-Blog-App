@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/article_notifier.dart';
+import '../widgets/article_list.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -59,59 +60,38 @@ class _HomePageState extends ConsumerState<HomePage> {
             }
 
             if (state.articles.isEmpty) {
-              return ListView(
-                children: const [
-                  SizedBox(height: 120),
-                  Center(
-                    child: Text('Aucun article publié.'),
-                  ),
-                ],
-              );
-            }
+  return ListView(
+    children: [
+      const SizedBox(height: 140),
+      Icon(
+        Icons.article_outlined,
+        size: 72,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      const SizedBox(height: 20),
+      Text(
+        'Aucun article publié',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        'Soyez le premier à partager un article avec la communauté.',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    ],
+  );
+}
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.articles.length,
-              itemBuilder: (context, index) {
-                final article = state.articles[index];
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: () {
-                      context.go('/article/${article.id}');
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            article.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Par ${article.authorName}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            article.content,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
+            return ArticleList(
+  articles: state.articles,
+  onArticleTap: (article) {
+    context.go('/article/${article.id}');
+  },
+);
           },
         ),
       ),

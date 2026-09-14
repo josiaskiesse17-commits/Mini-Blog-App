@@ -21,9 +21,13 @@ class EditArticlePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Modifier l\'article'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+      body: Center(
+       child: SingleChildScrollView(
+       padding: const EdgeInsets.all(24),
+       child: ConstrainedBox(
+       constraints: const BoxConstraints(
+        maxWidth: 700,
+        ),
           child: ArticleForm(
             initialTitle: article.title,
             initialContent: article.content,
@@ -65,6 +69,7 @@ class EditArticlePage extends ConsumerWidget {
             },
           ),
         ),
+      ),
       ),
     );
   }
