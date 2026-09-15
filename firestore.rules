@@ -1,6 +1,8 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -16,6 +18,7 @@ service cloud.firestore {
         'authorId',
         'authorName',
         'status',
+        'imageId',
         'createdAt',
         'updatedAt',
         'publishedAt'
@@ -44,6 +47,11 @@ service cloud.firestore {
         && data.authorName.size() <= 80;
     }
 
+    function validImageId(data) {
+      return data.imageId == null
+        || (data.imageId is string && data.imageId.size() > 0);
+    }
+
     function validPublishedAtOnCreate(data) {
       return (data.status == 'draft' && data.publishedAt == null)
         || (data.status == 'published' && data.publishedAt == request.time);
@@ -66,11 +74,13 @@ service cloud.firestore {
 
     function validArticleCreate() {
       let data = request.resource.data;
+
       return articleKeysPresent()
         && isOwner(data.authorId)
         && validTitle(data)
         && validContent(data)
         && validAuthorName(data)
+        && validImageId(data)
         && isValidStatus(data.status)
         && data.createdAt == request.time
         && data.updatedAt == request.time
@@ -80,12 +90,14 @@ service cloud.firestore {
     function validArticleUpdate() {
       let data = request.resource.data;
       let old = resource.data;
+
       return articleKeysPresent()
         && data.authorId == old.authorId
         && data.createdAt == old.createdAt
         && validTitle(data)
         && validContent(data)
         && validAuthorName(data)
+        && validImageId(data)
         && isValidStatus(data.status)
         && data.updatedAt == request.time
         && validPublishedAtOnUpdate(old, data);
@@ -102,6 +114,7 @@ service cloud.firestore {
 
     function validUserCreate() {
       let data = request.resource.data;
+
       return userKeysPresent()
         && (data.displayName == null || data.displayName is string)
         && (data.photoUrl == null || data.photoUrl is string)
@@ -112,6 +125,7 @@ service cloud.firestore {
     function validUserUpdate() {
       let data = request.resource.data;
       let old = resource.data;
+
       return userKeysPresent()
         && data.createdAt == old.createdAt
         && (data.displayName == null || data.displayName is string)
@@ -120,6 +134,7 @@ service cloud.firestore {
     }
 
     match /articles/{articleId} {
+
       allow get: if resource == null
         || resource.data.status == 'published'
         || isOwner(resource.data.authorId);
@@ -127,17 +142,22 @@ service cloud.firestore {
       allow list: if resource.data.status == 'published'
         || isOwner(resource.data.authorId);
 
-      allow create: if isSignedIn() && validArticleCreate();
+      allow create: if isSignedIn()
+        && validArticleCreate();
 
       allow update: if isSignedIn()
         && isOwner(resource.data.authorId)
         && validArticleUpdate();
 
-      allow delete: if isSignedIn() && isOwner(resource.data.authorId);
+      allow delete: if isSignedIn()
+        && isOwner(resource.data.authorId);
 
       match /comments/{commentId} {
+
         function parentArticle() {
-          return get(/databases/$(database)/documents/articles/$(articleId)).data;
+          return get(
+            /databases/$(database)/documents/articles/$(articleId)
+          ).data;
         }
 
         function commentKeysPresent() {
@@ -152,6 +172,7 @@ service cloud.firestore {
 
         function validCommentWrite() {
           let data = request.resource.data;
+
           return commentKeysPresent()
             && data.authorId is string
             && data.authorName is string
@@ -171,7 +192,9 @@ service cloud.firestore {
           || isOwner(parentArticle().authorId);
 
         allow create: if isSignedIn()
-          && exists(/databases/$(database)/documents/articles/$(articleId))
+          && exists(
+            /databases/$(database)/documents/articles/$(articleId)
+          )
           && parentArticle().status == 'published'
           && request.auth.uid == request.resource.data.authorId
           && validCommentWrite()
@@ -183,15 +206,23 @@ service cloud.firestore {
           && request.resource.data.authorId == resource.data.authorId
           && request.resource.data.createdAt == resource.data.createdAt;
 
-        allow delete: if isSignedIn() && isOwner(resource.data.authorId);
+        allow delete: if isSignedIn()
+          && isOwner(resource.data.authorId);
       }
     }
 
     match /users/{userId} {
+
       allow get: if resource == null || isSignedIn();
+
       allow list: if isSignedIn();
-      allow create: if isOwner(userId) && validUserCreate();
-      allow update: if isOwner(userId) && validUserUpdate();
+
+      allow create: if isOwner(userId)
+        && validUserCreate();
+
+      allow update: if isOwner(userId)
+        && validUserUpdate();
+
       allow delete: if false;
     }
   }

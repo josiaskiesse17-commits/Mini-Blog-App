@@ -57,6 +57,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       );
 
       await doc.set(model.toCreateMap());
+
       return doc.id;
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
@@ -282,10 +283,12 @@ Exception _mapFirebaseException(FirebaseException error) {
       return PermissionDeniedException(
         error.message ?? 'Permission refusée',
       );
+
     case 'not-found':
       return NotFoundException(
         error.message ?? 'Document introuvable',
       );
+
     default:
       return ServerException(
         error.message ?? error.code,
