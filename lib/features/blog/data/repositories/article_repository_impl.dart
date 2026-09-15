@@ -4,12 +4,15 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/article.dart';
 import '../../domain/entities/article_page.dart';
 import '../../domain/repositories/article_repository.dart';
+import '../datasources/article_local_data_source.dart';
 import '../datasources/article_remote_data_source.dart';
+import '../models/article_model.dart';
 
 class ArticleRepositoryImpl implements ArticleRepository {
-  const ArticleRepositoryImpl(this._remoteDataSource);
+  const ArticleRepositoryImpl(this._remoteDataSource, this._localDataSource);
 
   final ArticleRemoteDataSource _remoteDataSource;
+  final ArticleLocalDataSource _localDataSource;
 
   @override
   Future<(String?, Failure?)> createArticle(Article article) {
@@ -17,14 +20,31 @@ class ArticleRepositoryImpl implements ArticleRepository {
   }
 
   @override
-  Future<(Article?, Failure?)> getArticle(String id) {
-    return _guard(() => _remoteDataSource.getArticle(id));
+  Future<(Article?, Failure?)> getArticle(String id) async {
+    try {
+      final article = await _remoteDataSource.getArticle(id);
+      await _cacheArticleSilently(article);
+      return (article, null);
+    } on PermissionDeniedException catch (error) {
+      return (null, PermissionDeniedFailure(error.message));
+    } on NotFoundException catch (error) {
+      return (null, NotFoundFailure(error.message));
+    } on ServerException catch (error) {
+      final cached = await _getCachedArticleSilently(id);
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.message));
+    } catch (error) {
+      final cached = await _getCachedArticleSilently(id);
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.toString()));
+    }
   }
 
   @override
   Stream<(Article?, Failure?)> watchArticle(String id) async* {
     try {
       await for (final article in _remoteDataSource.watchArticle(id)) {
+        await _cacheArticleSilently(article);
         yield (article, null);
       }
     } on PermissionDeniedException catch (error) {
@@ -32,9 +52,19 @@ class ArticleRepositoryImpl implements ArticleRepository {
     } on NotFoundException catch (error) {
       yield (null, NotFoundFailure(error.message));
     } on ServerException catch (error) {
-      yield (null, ServerFailure(error.message));
+      final cached = await _getCachedArticleSilently(id);
+      if (cached != null) {
+        yield (cached, null);
+      } else {
+        yield (null, ServerFailure(error.message));
+      }
     } catch (error) {
-      yield (null, ServerFailure(error.toString()));
+      final cached = await _getCachedArticleSilently(id);
+      if (cached != null) {
+        yield (cached, null);
+      } else {
+        yield (null, ServerFailure(error.toString()));
+      }
     }
   }
 
@@ -43,14 +73,32 @@ class ArticleRepositoryImpl implements ArticleRepository {
     String? authorId,
     ArticlePageCursor? cursor,
     int limit = AppConstants.articlePageSize,
-  }) {
-    return _guard(
-      () => _remoteDataSource.getPublishedArticles(
+  }) async {
+    try {
+      final page = await _remoteDataSource.getPublishedArticles(
         authorId: authorId,
         cursor: cursor,
         limit: limit,
-      ),
-    );
+      );
+      await _cacheArticlesSilently(page.items);
+      return (page, null);
+    } on PermissionDeniedException catch (error) {
+      return (null, PermissionDeniedFailure(error.message));
+    } on NotFoundException catch (error) {
+      return (null, NotFoundFailure(error.message));
+    } on ServerException catch (error) {
+      final cached = cursor == null
+          ? await _getCachedPublishedArticles(authorId: authorId, limit: limit)
+          : null;
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.message));
+    } catch (error) {
+      final cached = cursor == null
+          ? await _getCachedPublishedArticles(authorId: authorId, limit: limit)
+          : null;
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.toString()));
+    }
   }
 
   @override
@@ -59,15 +107,41 @@ class ArticleRepositoryImpl implements ArticleRepository {
     ArticleStatus? status,
     ArticlePageCursor? cursor,
     int limit = AppConstants.articlePageSize,
-  }) {
-    return _guard(
-      () => _remoteDataSource.getMyArticles(
+  }) async {
+    try {
+      final page = await _remoteDataSource.getMyArticles(
         authorId: authorId,
         status: status,
         cursor: cursor,
         limit: limit,
-      ),
-    );
+      );
+      await _cacheArticlesSilently(page.items);
+      return (page, null);
+    } on PermissionDeniedException catch (error) {
+      return (null, PermissionDeniedFailure(error.message));
+    } on NotFoundException catch (error) {
+      return (null, NotFoundFailure(error.message));
+    } on ServerException catch (error) {
+      final cached = cursor == null
+          ? await _getCachedMyArticles(
+              authorId: authorId,
+              status: status,
+              limit: limit,
+            )
+          : null;
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.message));
+    } catch (error) {
+      final cached = cursor == null
+          ? await _getCachedMyArticles(
+              authorId: authorId,
+              status: status,
+              limit: limit,
+            )
+          : null;
+      if (cached != null) return (cached, null);
+      return (null, ServerFailure(error.toString()));
+    }
   }
 
   @override
@@ -110,6 +184,71 @@ class ArticleRepositoryImpl implements ArticleRepository {
     return _guardVoid(
       () => _remoteDataSource.deleteArticle(id),
     );
+  }
+
+  Future<Article?> _getCachedArticleSilently(String id) async {
+    try {
+      return await _localDataSource.getCachedArticle(id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<ArticlePage?> _getCachedPublishedArticles({
+    String? authorId,
+    required int limit,
+  }) async {
+    try {
+      final cached = await _localDataSource.getCachedArticles();
+      final filtered = cached.where((article) {
+        if (article.status != ArticleStatus.published) return false;
+        if (authorId != null && article.authorId != authorId) return false;
+        return true;
+      }).toList()
+        ..sort(
+          (a, b) => (b.publishedAt ?? b.updatedAt)
+              .compareTo(a.publishedAt ?? a.updatedAt),
+        );
+      if (filtered.isEmpty) return null;
+      return ArticlePage(items: filtered.take(limit).toList());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<ArticlePage?> _getCachedMyArticles({
+    required String authorId,
+    ArticleStatus? status,
+    required int limit,
+  }) async {
+    try {
+      final cached = await _localDataSource.getCachedArticles();
+      final filtered = cached.where((article) {
+        if (article.authorId != authorId) return false;
+        if (status != null && article.status != status) return false;
+        return true;
+      }).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (filtered.isEmpty) return null;
+      return ArticlePage(items: filtered.take(limit).toList());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _cacheArticleSilently(Article? article) async {
+    if (article == null) return;
+    try {
+      await _localDataSource.cacheArticle(ArticleModel.fromEntity(article));
+    } catch (_) {}
+  }
+
+  Future<void> _cacheArticlesSilently(List<Article> articles) async {
+    try {
+      await _localDataSource.cacheArticles(
+        articles.map(ArticleModel.fromEntity).toList(),
+      );
+    } catch (_) {}
   }
 
   Future<(T?, Failure?)> _guard<T>(
