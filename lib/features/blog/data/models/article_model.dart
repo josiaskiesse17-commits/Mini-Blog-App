@@ -13,6 +13,7 @@ class ArticleModel extends Article {
     required super.createdAt,
     required super.updatedAt,
     super.publishedAt,
+    super.imageId,
   });
 
   factory ArticleModel.fromEntity(Article article) {
@@ -26,6 +27,7 @@ class ArticleModel extends Article {
       createdAt: article.createdAt,
       updatedAt: article.updatedAt,
       publishedAt: article.publishedAt,
+      imageId: article.imageId,
     );
   }
 
@@ -33,7 +35,9 @@ class ArticleModel extends Article {
     final data = doc.data() as Map<String, dynamic>?;
 
     if (data == null) {
-      throw StateError('Document article ${doc.id} sans données');
+      throw StateError(
+        'Document article ${doc.id} sans données',
+      );
     }
 
     return ArticleModel(
@@ -48,10 +52,12 @@ class ArticleModel extends Article {
       createdAt: _toDate(data['createdAt']),
       updatedAt: _toDate(data['updatedAt']),
       publishedAt: _toDateOrNull(data['publishedAt']),
+      imageId: data['imageId'] as String?,
     );
   }
 
-  /// Champs écrits à la création. Les timestamps sont posés côté serveur.
+  /// Champs écrits à la création.
+  /// Les timestamps sont posés côté serveur.
   Map<String, dynamic> toCreateMap() {
     return {
       'title': title,
@@ -59,6 +65,7 @@ class ArticleModel extends Article {
       'authorId': authorId,
       'authorName': authorName,
       'status': status.name,
+      'imageId': imageId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'publishedAt': status == ArticleStatus.published
@@ -67,28 +74,29 @@ class ArticleModel extends Article {
     };
   }
 
-  /// Champs mutables uniquement. Ne jamais envoyer [authorId] ni [createdAt].
-  Map<String, dynamic> toUpdateMap({bool publishing = false}) {
+  /// Champs mutables uniquement.
+  /// Ne jamais envoyer [authorId] ni [createdAt].
+  Map<String, dynamic> toUpdateMap({
+    bool publishing = false,
+    bool clearingPublishedAt = false,
+    bool clearingImageId = false,
+  }) {
     return {
       'title': title,
       'content': content,
       'authorName': authorName,
       'status': status.name,
+      'imageId': clearingImageId ? null : imageId,
       'updatedAt': FieldValue.serverTimestamp(),
       if (publishing) 'publishedAt': FieldValue.serverTimestamp(),
+      if (clearingPublishedAt) 'publishedAt': null,
     };
   }
 
   static DateTime _toDate(dynamic value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    }
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
 
-    if (value is DateTime) {
-      return value;
-    }
-
-    // serverTimestamp pas encore résolu sur un snapshot local.
     return DateTime.fromMillisecondsSinceEpoch(
       0,
       isUtc: true,
@@ -96,9 +104,7 @@ class ArticleModel extends Article {
   }
 
   static DateTime? _toDateOrNull(dynamic value) {
-    if (value == null) {
-      return null;
-    }
+    if (value == null) return null;
 
     return _toDate(value);
   }

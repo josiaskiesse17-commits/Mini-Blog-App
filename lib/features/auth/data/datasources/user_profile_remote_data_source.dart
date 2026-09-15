@@ -65,20 +65,32 @@ class UserProfileRemoteDataSourceImpl implements UserProfileRemoteDataSource {
   }) async {
     try {
       final doc = _users.doc(uid);
-      final snap = await doc.get();
-      final model = UserProfileModel(
-        uid: uid,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      );
 
-      if (snap.exists) {
-        await doc.update(model.toUpdateMap());
-      } else {
-        await doc.set(model.toCreateMap());
-      }
+      await _firestore.runTransaction((transaction) async {
+        final snap = await transaction.get(doc);
+
+        if (snap.exists) {
+          transaction.update(
+            doc,
+            {
+              'displayName': displayName,
+              'photoUrl': photoUrl,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+          );
+          return;
+        }
+
+        transaction.set(
+          doc,
+          {
+            'displayName': displayName,
+            'photoUrl': photoUrl,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+        );
+      });
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
     }

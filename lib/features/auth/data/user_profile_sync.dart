@@ -1,24 +1,29 @@
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/repositories/user_profile_repository.dart';
-import '../datasources/user_profile_remote_data_source.dart';
-import '../repositories/user_profile_repository_impl.dart';
+import '../../auth/presentation/providers/auth_provider.dart';
+import '../domain/entities/user.dart';
+import 'providers/user_profile_repository_provider.dart';
 
 /// Synchronise `users/{uid}` dès qu'Auth émet un utilisateur.
+///
 /// N'implémente pas login / signup : lit seulement le uid Auth existant.
-void startUserProfileSync({UserProfileRepository? repository}) {
-  final repo =
-      repository ??
-      UserProfileRepositoryImpl(UserProfileRemoteDataSourceImpl());
+/// Les dépendances sont fournies par Riverpod.
+final userProfileSyncProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<User?>>(
+    authStateProvider,
+    (_, next) {
+      next.whenData((user) {
+        if (user == null) {
+          return;
+        }
 
-  firebase_auth.FirebaseAuth.instance.authStateChanges().listen((user) {
-    if (user == null) {
-      return;
-    }
-    repo.upsertProfile(
-      uid: user.uid,
-      displayName: user.displayName,
-      photoUrl: user.photoURL,
-    );
-  });
-}
+        ref.read(userProfileRepositoryProvider).upsertProfile(
+              uid: user.uid,
+              displayName: user.displayName,
+              photoUrl: user.photoUrl,
+            );
+      });
+    },
+    fireImmediately: true,
+  );
+});
