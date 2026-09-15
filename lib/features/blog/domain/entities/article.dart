@@ -5,7 +5,9 @@ enum ArticleStatus {
   static ArticleStatus fromName(String value) {
     return ArticleStatus.values.firstWhere(
       (status) => status.name == value,
-      orElse: () => throw FormatException('Statut d\'article invalide: $value'),
+      orElse: () => throw FormatException(
+        'Statut d\'article invalide: $value',
+      ),
     );
   }
 }
@@ -20,6 +22,7 @@ class Article {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? publishedAt;
+  final String? imageId;
 
   const Article({
     required this.id,
@@ -31,9 +34,11 @@ class Article {
     required this.createdAt,
     required this.updatedAt,
     this.publishedAt,
+    this.imageId,
   });
 
   bool get isDraft => status == ArticleStatus.draft;
+
   bool get isPublished => status == ArticleStatus.published;
 
   Article copyWith({
@@ -46,7 +51,9 @@ class Article {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? publishedAt,
+    String? imageId,
     bool clearPublishedAt = false,
+    bool clearImageId = false,
   }) {
     return Article(
       id: id ?? this.id,
@@ -57,7 +64,12 @@ class Article {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      publishedAt: clearPublishedAt ? null : (publishedAt ?? this.publishedAt),
+      publishedAt: clearPublishedAt
+          ? null
+          : (publishedAt ?? this.publishedAt),
+      imageId: clearImageId
+          ? null
+          : (imageId ?? this.imageId),
     );
   }
 }

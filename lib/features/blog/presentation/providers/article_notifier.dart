@@ -94,7 +94,10 @@ class ArticleNotifier extends Notifier<ArticleState> {
       return false;
     }
 
-    await fetchArticles();
+    state = state.copyWith(
+      isLoading: false,
+    );
+
     return true;
   }
 
