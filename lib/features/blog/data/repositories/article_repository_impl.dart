@@ -160,30 +160,41 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
   @override
   Future<Failure?> updateArticle(Article article) {
-    return _guardVoid(
-      () => _remoteDataSource.updateArticle(article),
-    );
+    return _guardVoid(() => _remoteDataSource.updateArticle(article));
   }
 
   @override
   Future<(String?, Failure?)> saveDraft(Article article) {
-    return _guard(
-      () => _remoteDataSource.saveDraft(article),
-    );
+    return _guard(() => _remoteDataSource.saveDraft(article));
   }
 
   @override
   Future<Failure?> publishArticle(String id) {
-    return _guardVoid(
-      () => _remoteDataSource.publishArticle(id),
-    );
+    return _guardVoid(() => _remoteDataSource.publishArticle(id));
   }
 
   @override
   Future<Failure?> deleteArticle(String id) {
-    return _guardVoid(
-      () => _remoteDataSource.deleteArticle(id),
-    );
+    return _guardVoid(() => _remoteDataSource.deleteArticle(id));
+  }
+
+  Future<(T?, Failure?)> _guard<T>(Future<T> Function() action) async {
+    try {
+      return (await action(), null);
+    } on PermissionDeniedException catch (error) {
+      return (null, PermissionDeniedFailure(error.message));
+    } on NotFoundException catch (error) {
+      return (null, NotFoundFailure(error.message));
+    } on ServerException catch (error) {
+      return (null, ServerFailure(error.message));
+    } catch (error) {
+      return (null, ServerFailure(error.toString()));
+    }
+  }
+
+  Future<Failure?> _guardVoid(Future<void> Function() action) async {
+    final result = await _guard(action);
+    return result.$2;
   }
 
   Future<Article?> _getCachedArticleSilently(String id) async {
@@ -200,15 +211,16 @@ class ArticleRepositoryImpl implements ArticleRepository {
   }) async {
     try {
       final cached = await _localDataSource.getCachedArticles();
-      final filtered = cached.where((article) {
-        if (article.status != ArticleStatus.published) return false;
-        if (authorId != null && article.authorId != authorId) return false;
-        return true;
-      }).toList()
-        ..sort(
-          (a, b) => (b.publishedAt ?? b.updatedAt)
-              .compareTo(a.publishedAt ?? a.updatedAt),
-        );
+      final filtered =
+          cached.where((article) {
+            if (article.status != ArticleStatus.published) return false;
+            if (authorId != null && article.authorId != authorId) return false;
+            return true;
+          }).toList()..sort(
+            (a, b) => (b.publishedAt ?? b.updatedAt).compareTo(
+              a.publishedAt ?? a.updatedAt,
+            ),
+          );
       if (filtered.isEmpty) return null;
       return ArticlePage(items: filtered.take(limit).toList());
     } catch (_) {
@@ -227,8 +239,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
         if (article.authorId != authorId) return false;
         if (status != null && article.status != status) return false;
         return true;
-      }).toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       if (filtered.isEmpty) return null;
       return ArticlePage(items: filtered.take(limit).toList());
     } catch (_) {
@@ -249,28 +260,5 @@ class ArticleRepositoryImpl implements ArticleRepository {
         articles.map(ArticleModel.fromEntity).toList(),
       );
     } catch (_) {}
-  }
-
-  Future<(T?, Failure?)> _guard<T>(
-    Future<T> Function() action,
-  ) async {
-    try {
-      return (await action(), null);
-    } on PermissionDeniedException catch (error) {
-      return (null, PermissionDeniedFailure(error.message));
-    } on NotFoundException catch (error) {
-      return (null, NotFoundFailure(error.message));
-    } on ServerException catch (error) {
-      return (null, ServerFailure(error.message));
-    } catch (error) {
-      return (null, ServerFailure(error.toString()));
-    }
-  }
-
-  Future<Failure?> _guardVoid(
-    Future<void> Function() action,
-  ) async {
-    final result = await _guard(action);
-    return result.$2;
   }
 }

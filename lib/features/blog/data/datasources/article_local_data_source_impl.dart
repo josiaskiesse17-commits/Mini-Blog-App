@@ -30,7 +30,11 @@ class HiveArticleLocalDataSource implements ArticleLocalDataSource {
       final articles = _box.values
           .map((raw) => _fromMap(Map<String, dynamic>.from(raw)))
           .toList();
-      articles.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      articles.sort(
+        (a, b) => b.updatedAt.compareTo(a.updatedAt),
+      );
+
       return articles;
     } catch (error) {
       throw CacheException(error.toString());
@@ -40,7 +44,10 @@ class HiveArticleLocalDataSource implements ArticleLocalDataSource {
   @override
   Future<void> cacheArticle(ArticleModel article) async {
     try {
-      await _box.put(article.id, _toMap(article));
+      await _box.put(
+        article.id,
+        _toMap(article),
+      );
     } catch (error) {
       throw CacheException(error.toString());
     }
@@ -50,8 +57,14 @@ class HiveArticleLocalDataSource implements ArticleLocalDataSource {
   Future<ArticleModel?> getCachedArticle(String id) async {
     try {
       final raw = _box.get(id);
-      if (raw == null) return null;
-      return _fromMap(Map<String, dynamic>.from(raw));
+
+      if (raw == null) {
+        return null;
+      }
+
+      return _fromMap(
+        Map<String, dynamic>.from(raw),
+      );
     } catch (error) {
       throw CacheException(error.toString());
     }
@@ -77,6 +90,7 @@ class HiveArticleLocalDataSource implements ArticleLocalDataSource {
       'createdAt': article.createdAt,
       'updatedAt': article.updatedAt,
       'publishedAt': article.publishedAt,
+      'imageId': article.imageId,
     };
   }
 
@@ -87,10 +101,13 @@ class HiveArticleLocalDataSource implements ArticleLocalDataSource {
       content: map['content'] as String,
       authorId: map['authorId'] as String,
       authorName: map['authorName'] as String,
-      status: ArticleStatus.fromName(map['status'] as String),
+      status: ArticleStatus.fromName(
+        map['status'] as String,
+      ),
       createdAt: map['createdAt'] as DateTime,
       updatedAt: map['updatedAt'] as DateTime,
       publishedAt: map['publishedAt'] as DateTime?,
+      imageId: map['imageId'] as String?,
     );
   }
 }

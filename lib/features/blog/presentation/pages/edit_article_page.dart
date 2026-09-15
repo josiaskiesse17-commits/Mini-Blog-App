@@ -21,48 +21,60 @@ class EditArticlePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Modifier l\'article'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: SingleChildScrollView(
-          child: ArticleForm(
-            initialTitle: article.title,
-            initialContent: article.content,
-            isLoading: articleState.isLoading,
-            onSubmit: (newTitle, newContent) async {
-              final updatedArticle = article.copyWith(
-                title: newTitle,
-                content: newContent,
-                updatedAt: DateTime.now(),
-              );
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 800,
+              ),
+              child: ArticleForm(
+                initialTitle: article.title,
+                initialContent: article.content,
+                initialImageId: article.imageId,
+                isLoading: articleState.isLoading,
+                onSubmit: (newTitle, newContent, imageId) async {
+                  final updatedArticle = article.copyWith(
+                    title: newTitle,
+                    content: newContent,
+                    imageId: imageId,
+                    updatedAt: DateTime.now(),
+                  );
 
-              final success = await ref
-                  .read(articleNotifierProvider.notifier)
-                  .updateArticle(updatedArticle);
+                  final success = await ref
+                      .read(articleNotifierProvider.notifier)
+                      .updateArticle(updatedArticle);
 
-              if (!context.mounted) {
-                return;
-              }
+                  if (!context.mounted) {
+                    return;
+                  }
 
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Article modifié avec succès !'),
-                  ),
-                );
-                Navigator.of(context).pop();
-              } else {
-                final errorMessage =
-                    ref.read(articleNotifierProvider).errorMessage ??
-                    'Erreur lors de la modification';
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Article modifié avec succès !',
+                        ),
+                      ),
+                    );
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(errorMessage),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
+                    Navigator.of(context).pop();
+                  } else {
+                    final errorMessage =
+                        ref.read(articleNotifierProvider).errorMessage ??
+                        'Erreur lors de la modification';
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(errorMessage),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
           ),
         ),
       ),

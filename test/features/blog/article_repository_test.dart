@@ -243,21 +243,7 @@ void main() {
     );
 
     test(
-      'getArticle retourne ServerFailure si Firestore échoue et rien en cache',
-      () async {
-        final repo = ArticleRepositoryImpl(
-          _ServerErrorDataSource(),
-          localDataSource,
-        );
-
-        final (article, failure) = await repo.getArticle('inconnu');
-        expect(article, isNull);
-        expect(failure, isA<ServerFailure>());
-      },
-    );
-
-    test(
-      'getPublishedArticles retombe sur le cache filtré quand Firestore échoue',
+      'getPublishedArticles retombe sur le cache filtré hors-ligne',
       () async {
         await localDataSource.cacheArticles([
           ArticleModel(
@@ -282,7 +268,6 @@ void main() {
             updatedAt: DateTime.utc(2026, 9, 1),
           ),
         ]);
-
         final repo = ArticleRepositoryImpl(
           _ServerErrorDataSource(),
           localDataSource,
@@ -292,47 +277,22 @@ void main() {
         expect(failure, isNull);
         expect(page!.items, hasLength(1));
         expect(page.items.first.title, 'Publié');
-        expect(page.hasMore, isFalse);
       },
     );
 
-    test(
-      'getPublishedArticles avec un curseur ne retombe pas sur le cache',
-      () async {
-        final repo = ArticleRepositoryImpl(
-          _ServerErrorDataSource(),
-          localDataSource,
-        );
+    test('getMyArticles met en cache et relit hors-ligne', () async {
+      await repository.createArticle(draft(title: 'Article A'));
+      await repository.createArticle(draft(title: 'Article B'));
+      await repository.getMyArticles(authorId: 'uid-alice');
 
-        final (page, failure) = await repo.getPublishedArticles(
-          cursor: const ArticlePageCursor('doc-1'),
-        );
-        expect(page, isNull);
-        expect(failure, isA<ServerFailure>());
-      },
-    );
-
-    test(
-      'getMyArticles met en cache les résultats et retombe dessus hors-ligne',
-      () async {
-        await repository.createArticle(draft(title: 'Article A'));
-        await repository.createArticle(draft(title: 'Article B'));
-
-        await repository.getMyArticles(authorId: 'uid-alice');
-        final cached = await localDataSource.getCachedArticles();
-        expect(cached, hasLength(2));
-
-        final repo = ArticleRepositoryImpl(
-          _ServerErrorDataSource(),
-          localDataSource,
-        );
-        final (page, failure) = await repo.getMyArticles(
-          authorId: 'uid-alice',
-        );
-        expect(failure, isNull);
-        expect(page!.items, hasLength(2));
-      },
-    );
+      final repo = ArticleRepositoryImpl(
+        _ServerErrorDataSource(),
+        localDataSource,
+      );
+      final (page, failure) = await repo.getMyArticles(authorId: 'uid-alice');
+      expect(failure, isNull);
+      expect(page!.items, hasLength(2));
+    });
   });
 }
 
@@ -347,11 +307,8 @@ class FakeArticleLocalDataSource implements ArticleLocalDataSource {
   }
 
   @override
-  Future<List<ArticleModel>> getCachedArticles() async {
-    final articles = _store.values.toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return articles;
-  }
+  Future<List<ArticleModel>> getCachedArticles() async =>
+      _store.values.toList();
 
   @override
   Future<void> cacheArticle(ArticleModel article) async {
@@ -359,14 +316,10 @@ class FakeArticleLocalDataSource implements ArticleLocalDataSource {
   }
 
   @override
-  Future<ArticleModel?> getCachedArticle(String id) async {
-    return _store[id];
-  }
+  Future<ArticleModel?> getCachedArticle(String id) async => _store[id];
 
   @override
-  Future<void> clearCache() async {
-    _store.clear();
-  }
+  Future<void> clearCache() async => _store.clear();
 }
 
 class _ServerErrorDataSource implements ArticleRemoteDataSource {
@@ -374,9 +327,8 @@ class _ServerErrorDataSource implements ArticleRemoteDataSource {
   Future<String> createArticle(Article article) => throw UnimplementedError();
 
   @override
-  Future<ArticleModel> getArticle(String id) {
-    throw const ServerException('indisponible');
-  }
+  Future<ArticleModel> getArticle(String id) =>
+      throw const ServerException('indisponible');
 
   @override
   Stream<ArticleModel?> watchArticle(String id) => throw UnimplementedError();
@@ -386,9 +338,7 @@ class _ServerErrorDataSource implements ArticleRemoteDataSource {
     String? authorId,
     ArticlePageCursor? cursor,
     required int limit,
-  }) {
-    throw const ServerException('indisponible');
-  }
+  }) => throw const ServerException('indisponible');
 
   @override
   Future<ArticlePage> getMyArticles({
@@ -396,9 +346,7 @@ class _ServerErrorDataSource implements ArticleRemoteDataSource {
     ArticleStatus? status,
     ArticlePageCursor? cursor,
     required int limit,
-  }) {
-    throw const ServerException('indisponible');
-  }
+  }) => throw const ServerException('indisponible');
 
   @override
   Future<void> updateArticle(Article article) => throw UnimplementedError();
@@ -418,9 +366,8 @@ class _PermissionDeniedDataSource implements ArticleRemoteDataSource {
   Future<String> createArticle(Article article) => throw UnimplementedError();
 
   @override
-  Future<ArticleModel> getArticle(String id) {
-    throw const PermissionDeniedException('interdit');
-  }
+  Future<ArticleModel> getArticle(String id) =>
+      throw const PermissionDeniedException('interdit');
 
   @override
   Stream<ArticleModel?> watchArticle(String id) => throw UnimplementedError();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../widgets/auth_field.dart';
@@ -23,7 +24,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
 
-    await ref.read(authNotifierProvider.notifier).signIn(
+    await ref
+        .read(authNotifierProvider.notifier)
+        .signIn(
           email: emailController.text.trim(),
           password: passwordController.text,
         );
@@ -34,11 +37,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     state.whenOrNull(
       error: (error, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString()),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
       },
     );
   }
@@ -55,53 +56,70 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Connexion'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                AuthField(
-                  controller: emailController,
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Veuillez saisir votre e-mail';
-                    }
-
-                    return null;
-                  },
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(Icons.article_outlined, size: 70),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Bienvenue sur MiniBlog',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Connectez-vous pour accéder à votre espace',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 40),
+                    AuthField(
+                      controller: emailController,
+                      label: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Veuillez saisir votre e-mail';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    AuthField(
+                      controller: passwordController,
+                      label: 'Mot de passe',
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez saisir votre mot de passe';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    AuthGradientButton(
+                      text: authState.isLoading
+                          ? 'Connexion...'
+                          : 'Se connecter',
+                      onPressed: authState.isLoading ? null : login,
+                    ),
+                    const SizedBox(height: 24),
+                    TextButton(
+                      onPressed: () => context.go('/signup'),
+                      child: const Text('Créer un compte'),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 16),
-
-                AuthField(
-                  controller: passwordController,
-                  label: 'Mot de passe',
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez saisir votre mot de passe';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                AuthGradientButton(
-                  text: authState.isLoading
-                      ? 'Connexion...'
-                      : 'Se connecter',
-                  onPressed: authState.isLoading ? null : login,
-                ),
-              ],
+              ),
             ),
           ),
         ),
