@@ -5,12 +5,10 @@ import '../../domain/entities/article.dart';
 import 'article_image.dart';
 
 class ArticleCard extends StatelessWidget {
-  const ArticleCard({
-    super.key,
-    required this.article,
-  });
+  const ArticleCard({super.key, required this.article, this.onTap});
 
   final Article article;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,25 +20,15 @@ class ArticleCard extends StatelessWidget {
       elevation: 1,
       margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: () {
-          context.go('/article/${article.id}');
-        },
+        onTap: onTap ?? () => context.go('/article/${article.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (article.imageId != null)
-              ArticleImage(
-                imageId: article.imageId,
-                height: 200,
-              ),
+              ArticleImage(imageId: article.imageId, height: 200),
 
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                18,
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

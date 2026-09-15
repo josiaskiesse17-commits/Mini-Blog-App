@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../widgets/auth_field.dart';
@@ -25,7 +26,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       return;
     }
 
-    await ref.read(authNotifierProvider.notifier).signUp(
+    await ref
+        .read(authNotifierProvider.notifier)
+        .signUp(
           email: emailController.text.trim(),
           password: passwordController.text,
           displayName: displayNameController.text.trim(),
@@ -37,11 +40,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
     state.whenOrNull(
       error: (error, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString()),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
       },
     );
   }
@@ -60,90 +61,99 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inscription'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                AuthField(
-                  controller: displayNameController,
-                  label: 'Nom d\'affichage',
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Veuillez saisir votre nom';
-                    }
-
-                    return null;
-                  },
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(Icons.article_outlined, size: 70),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Créer un compte',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Rejoignez la communauté MiniBlog',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 40),
+                    AuthField(
+                      controller: displayNameController,
+                      label: 'Nom d\'affichage',
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Veuillez saisir votre nom';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    AuthField(
+                      controller: emailController,
+                      label: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Veuillez saisir votre e-mail';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    AuthField(
+                      controller: passwordController,
+                      label: 'Mot de passe',
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez saisir un mot de passe';
+                        }
+                        if (value.length < 6) {
+                          return 'Le mot de passe doit contenir au moins 6 caractères';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    AuthField(
+                      controller: verifyPasswordController,
+                      label: 'Confirmer le mot de passe',
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez confirmer le mot de passe';
+                        }
+                        if (value != passwordController.text) {
+                          return 'Les mots de passe ne correspondent pas';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    AuthGradientButton(
+                      text: authState.isLoading
+                          ? 'Inscription...'
+                          : 'S’inscrire',
+                      onPressed: authState.isLoading ? null : register,
+                    ),
+                    const SizedBox(height: 24),
+                    TextButton(
+                      onPressed: () => context.go('/login'),
+                      child: const Text('Déjà un compte ? Se connecter'),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 16),
-
-                AuthField(
-                  controller: emailController,
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Veuillez saisir votre e-mail';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                AuthField(
-                  controller: passwordController,
-                  label: 'Mot de passe',
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez saisir un mot de passe';
-                    }
-
-                    if (value.length < 6) {
-                      return 'Le mot de passe doit contenir au moins 6 caractères';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                AuthField(
-                  controller: verifyPasswordController,
-                  label: 'Confirmer le mot de passe',
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez confirmer le mot de passe';
-                    }
-
-                    if (value != passwordController.text) {
-                      return 'Les mots de passe ne correspondent pas';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                AuthGradientButton(
-                  text: authState.isLoading
-                      ? 'Inscription...'
-                      : 'S’inscrire',
-                  onPressed: authState.isLoading ? null : register,
-                ),
-              ],
+              ),
             ),
           ),
         ),
