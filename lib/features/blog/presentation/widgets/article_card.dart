@@ -24,8 +24,7 @@ class ArticleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (article.imageId != null)
-              ArticleImage(imageId: article.imageId, height: 200),
+            ArticleImage(imageId: article.imageId, height: 200),
 
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),

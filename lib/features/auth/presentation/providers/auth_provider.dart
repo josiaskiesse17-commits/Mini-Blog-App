@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 
+import '../../../../core/errors/failures.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/user.dart';
@@ -14,9 +15,7 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
 });
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthRemoteDataSource(
-    firebaseAuth: ref.watch(firebaseAuthProvider),
-  );
+  return AuthRemoteDataSource(firebaseAuth: ref.watch(firebaseAuthProvider));
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -26,21 +25,15 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final loginUserProvider = Provider<LoginUser>((ref) {
-  return LoginUser(
-    ref.watch(authRepositoryProvider),
-  );
+  return LoginUser(ref.watch(authRepositoryProvider));
 });
 
 final registerUserProvider = Provider<RegisterUser>((ref) {
-  return RegisterUser(
-    ref.watch(authRepositoryProvider),
-  );
+  return RegisterUser(ref.watch(authRepositoryProvider));
 });
 
 final logoutUserProvider = Provider<LogoutUser>((ref) {
-  return LogoutUser(
-    ref.watch(authRepositoryProvider),
-  );
+  return LogoutUser(ref.watch(authRepositoryProvider));
 });
 
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -53,10 +46,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     return const AsyncData(null);
   }
 
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     state = const AsyncLoading();
 
     final result = await ref.read(loginUserProvider)(
@@ -67,10 +57,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     final (_, failure) = result;
 
     if (failure != null) {
-      state = AsyncError(
-        failure.message,
-        StackTrace.current,
-      );
+      state = AsyncError(failure.message, StackTrace.current);
       return;
     }
 
@@ -93,10 +80,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     final (_, failure) = result;
 
     if (failure != null) {
-      state = AsyncError(
-        failure.message,
-        StackTrace.current,
-      );
+      state = AsyncError(failure.message, StackTrace.current);
       return;
     }
 
@@ -109,18 +93,22 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     final failure = await ref.read(logoutUserProvider)();
 
     if (failure != null) {
-      state = AsyncError(
-        failure.message,
-        StackTrace.current,
-      );
+      state = AsyncError(failure.message, StackTrace.current);
       return;
     }
 
     state = const AsyncData(null);
   }
+
+  Future<Failure?> sendPasswordResetEmail(String email) {
+    return ref.read(authRepositoryProvider).sendPasswordResetEmail(email);
+  }
+
+  Future<Failure?> updatePassword(String password) {
+    return ref.read(authRepositoryProvider).updatePassword(password);
+  }
 }
 
-final authNotifierProvider =
-    NotifierProvider<AuthNotifier, AsyncValue<void>>(
+final authNotifierProvider = NotifierProvider<AuthNotifier, AsyncValue<void>>(
   AuthNotifier.new,
 );

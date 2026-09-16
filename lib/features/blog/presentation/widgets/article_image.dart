@@ -22,27 +22,23 @@ class ArticleImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (imageId == null || imageId!.isEmpty) {
-      return const SizedBox.shrink();
+      return _placeholder(context);
     }
 
     return FutureBuilder<Uint8List?>(
-      future: ref
-          .read(articleImageLocalDataSourceProvider)
-          .getImage(imageId!),
+      future: ref.read(articleImageLocalDataSourceProvider).getImage(imageId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return SizedBox(
             height: height,
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: const Center(child: CircularProgressIndicator()),
           );
         }
 
         final bytes = snapshot.data;
 
         if (bytes == null || bytes.isEmpty) {
-          return const SizedBox.shrink();
+          return _placeholder(context);
         }
 
         return ClipRRect(
@@ -55,6 +51,25 @@ class ArticleImage extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _placeholder(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Container(
+        width: double.infinity,
+        height: height,
+        color: colorScheme.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.image_outlined,
+          size: 48,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

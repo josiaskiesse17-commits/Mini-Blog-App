@@ -112,6 +112,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           : 'Se connecter',
                       onPressed: authState.isLoading ? null : login,
                     ),
+                    TextButton(
+                      onPressed: _sendPasswordReset,
+                      child: const Text('Mot de passe oublié ?'),
+                    ),
                     const SizedBox(height: 24),
                     TextButton(
                       onPressed: () => context.go('/signup'),
@@ -122,6 +126,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saisissez votre e-mail d’abord.')),
+      );
+      return;
+    }
+
+    final failure = await ref
+        .read(authNotifierProvider.notifier)
+        .sendPasswordResetEmail(email);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          failure == null ? 'E-mail de récupération envoyé.' : failure.message,
         ),
       ),
     );

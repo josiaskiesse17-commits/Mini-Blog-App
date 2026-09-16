@@ -9,9 +9,7 @@ import '../models/user_model.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
 
-  AuthRepositoryImpl({
-    required this.remoteDataSource,
-  });
+  AuthRepositoryImpl({required this.remoteDataSource});
 
   @override
   Future<(User?, Failure?)> signIn({
@@ -27,26 +25,14 @@ class AuthRepositoryImpl implements AuthRepository {
       final firebaseUser = credential.user;
 
       if (firebaseUser == null) {
-        return (
-          null,
-          const AuthFailure('Utilisateur introuvable'),
-        );
+        return (null, const AuthFailure('Utilisateur introuvable'));
       }
 
-      return (
-        UserModel.fromFirebaseUser(firebaseUser),
-        null,
-      );
+      return (UserModel.fromFirebaseUser(firebaseUser), null);
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return (
-        null,
-        AuthFailure(_getAuthErrorMessage(e.code)),
-      );
+      return (null, AuthFailure(_getAuthErrorMessage(e.code)));
     } catch (e) {
-      return (
-        null,
-        ServerFailure(e.toString()),
-      );
+      return (null, ServerFailure(e.toString()));
     }
   }
 
@@ -66,26 +52,14 @@ class AuthRepositoryImpl implements AuthRepository {
       final firebaseUser = credential.user;
 
       if (firebaseUser == null) {
-        return (
-          null,
-          const AuthFailure('Impossible de créer l’utilisateur'),
-        );
+        return (null, const AuthFailure('Impossible de créer l’utilisateur'));
       }
 
-      return (
-        UserModel.fromFirebaseUser(firebaseUser),
-        null,
-      );
+      return (UserModel.fromFirebaseUser(firebaseUser), null);
     } on firebase_auth.FirebaseAuthException catch (e) {
-      return (
-        null,
-        AuthFailure(_getAuthErrorMessage(e.code)),
-      );
+      return (null, AuthFailure(_getAuthErrorMessage(e.code)));
     } catch (e) {
-      return (
-        null,
-        ServerFailure(e.toString()),
-      );
+      return (null, ServerFailure(e.toString()));
     }
   }
 
@@ -102,16 +76,38 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Stream<User?> get authStateChanges {
-    return remoteDataSource.authStateChanges.map(
-      (firebaseUser) {
-        if (firebaseUser == null) {
-          return null;
-        }
+  Future<Failure?> sendPasswordResetEmail(String email) async {
+    try {
+      await remoteDataSource.sendPasswordResetEmail(email);
+      return null;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return AuthFailure(_getAuthErrorMessage(e.code));
+    } catch (e) {
+      return ServerFailure(e.toString());
+    }
+  }
 
-        return UserModel.fromFirebaseUser(firebaseUser);
-      },
-    );
+  @override
+  Future<Failure?> updatePassword(String password) async {
+    try {
+      await remoteDataSource.updatePassword(password);
+      return null;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return AuthFailure(_getAuthErrorMessage(e.code));
+    } catch (e) {
+      return ServerFailure(e.toString());
+    }
+  }
+
+  @override
+  Stream<User?> get authStateChanges {
+    return remoteDataSource.authStateChanges.map((firebaseUser) {
+      if (firebaseUser == null) {
+        return null;
+      }
+
+      return UserModel.fromFirebaseUser(firebaseUser);
+    });
   }
 
   String _getAuthErrorMessage(String code) {
@@ -124,6 +120,8 @@ class AuthRepositoryImpl implements AuthRepository {
       'weak-password' => 'Le mot de passe est trop faible',
       'user-disabled' => 'Le compte est désactivé',
       'too-many-requests' => 'Trop de tentatives. Réessayez plus tard',
+      'requires-recent-login' =>
+        'Reconnectez-vous avant de changer le mot de passe',
       _ => 'Une erreur d’authentification est survenue',
     };
   }

@@ -3,9 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class AuthRemoteDataSource {
   final FirebaseAuth firebaseAuth;
 
-  AuthRemoteDataSource({
-    required this.firebaseAuth,
-  });
+  AuthRemoteDataSource({required this.firebaseAuth});
 
   Future<UserCredential> signIn({
     required String email,
@@ -40,6 +38,18 @@ class AuthRemoteDataSource {
 
   Future<void> signOut() async {
     await firebaseAuth.signOut();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) {
+    return firebaseAuth.sendPasswordResetEmail(email: email);
+  }
+
+  Future<void> updatePassword(String password) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(code: 'user-not-found');
+    }
+    await user.updatePassword(password);
   }
 
   Stream<User?> get authStateChanges {

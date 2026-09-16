@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppPalette {
   const AppPalette._();
 
-  static const primary = Colors.indigo;
-  static const background = Colors.white;
-  static const surface = Color(0xFFF5F5F5);
+  static const primary = Color(0xFF0F766E);
+  static const background = Color(0xFFF4F8F7);
+  static const surface = Colors.white;
 }

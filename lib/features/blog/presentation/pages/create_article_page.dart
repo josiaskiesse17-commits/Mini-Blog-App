@@ -17,6 +17,11 @@ class CreateArticlePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Retour',
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back),
+        ),
         title: const Text('Créer un article'),
       ),
       body: SafeArea(
@@ -24,9 +29,7 @@ class CreateArticlePage extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 800,
-              ),
+              constraints: const BoxConstraints(maxWidth: 800),
               child: ArticleForm(
                 isLoading: articleState.isLoading,
                 onSubmit: (title, content, imageId) async {

@@ -33,9 +33,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       appBar: AppBar(
         title: const Text(
           'MiniBlog',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -46,18 +44,19 @@ class _HomePageState extends ConsumerState<HomePage> {
               ref.read(themeProvider.notifier).toggleTheme();
             },
             icon: Icon(
-              themeMode == ThemeMode.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
+              themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
             ),
+          ),
+          IconButton(
+            tooltip: 'Compte',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => context.go('/account'),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () {
-          return ref
-              .read(articleNotifierProvider.notifier)
-              .fetchArticles();
+          return ref.read(articleNotifierProvider.notifier).fetchArticles();
         },
         child: Builder(
           builder: (context) {
@@ -65,15 +64,12 @@ class _HomePageState extends ConsumerState<HomePage> {
               return ListView(
                 children: const [
                   SizedBox(height: 180),
-                  Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  Center(child: CircularProgressIndicator()),
                 ],
               );
             }
 
-            if (state.errorMessage != null &&
-                state.articles.isEmpty) {
+            if (state.errorMessage != null && state.articles.isEmpty) {
               return ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
@@ -102,9 +98,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: FilledButton.icon(
                       onPressed: () {
                         ref
-                            .read(
-                              articleNotifierProvider.notifier,
-                            )
+                            .read(articleNotifierProvider.notifier)
                             .fetchArticles();
                       },
                       icon: const Icon(Icons.refresh),
@@ -144,14 +138,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   Center(
                     child: FilledButton.icon(
                       onPressed: () async {
-                        final created =
-                            await context.push<bool>('/create');
+                        final created = await context.push<bool>('/create');
 
                         if (created == true && mounted) {
                           await ref
-                              .read(
-                                articleNotifierProvider.notifier,
-                              )
+                              .read(articleNotifierProvider.notifier)
                               .fetchArticles();
                         }
                       },
@@ -170,24 +161,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                 final crossAxisCount = width >= 1200
                     ? 3
                     : width >= 700
-                        ? 2
-                        : 1;
+                    ? 2
+                    : 1;
 
                 return CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          16,
-                          20,
-                          16,
-                          4,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
                         child: Text(
                           'Articles récents',
-                          style: theme.textTheme.headlineSmall
-                              ?.copyWith(
+                          style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -196,22 +181,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                     SliverPadding(
                       padding: const EdgeInsets.all(16),
                       sliver: SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final article = state.articles[index];
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final article = state.articles[index];
 
-                            return ArticleCard(
-                              article: article,
-                            );
-                          },
-                          childCount: state.articles.length,
-                        ),
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
+                          return ArticleCard(article: article);
+                        }, childCount: state.articles.length),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          mainAxisExtent: 420,
+                          mainAxisExtent: 500,
                         ),
                       ),
                     ),
@@ -227,9 +206,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           final created = await context.push<bool>('/create');
 
           if (created == true && mounted) {
-            await ref
-                .read(articleNotifierProvider.notifier)
-                .fetchArticles();
+            await ref.read(articleNotifierProvider.notifier).fetchArticles();
           }
         },
         icon: const Icon(Icons.add),

@@ -8,10 +8,7 @@ import '../widgets/article_form.dart';
 class EditArticlePage extends ConsumerWidget {
   final Article article;
 
-  const EditArticlePage({
-    super.key,
-    required this.article,
-  });
+  const EditArticlePage({super.key, required this.article});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,6 +16,11 @@ class EditArticlePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Retour',
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back),
+        ),
         title: const Text('Modifier l\'article'),
       ),
       body: SafeArea(
@@ -26,9 +28,7 @@ class EditArticlePage extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 800,
-              ),
+              constraints: const BoxConstraints(maxWidth: 800),
               child: ArticleForm(
                 initialTitle: article.title,
                 initialContent: article.content,
@@ -53,9 +53,7 @@ class EditArticlePage extends ConsumerWidget {
                   if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Article modifié avec succès !',
-                        ),
+                        content: Text('Article modifié avec succès !'),
                       ),
                     );
 
