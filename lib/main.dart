@@ -35,6 +35,8 @@ Future<void> main() async {
     HiveArticleImageLocalDataSource.boxName,
   );
 
+  await Hive.openBox('app_settings');
+
   runApp(
     ProviderScope(
       overrides: [
