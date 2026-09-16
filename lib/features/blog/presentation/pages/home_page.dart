@@ -211,7 +211,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio: 0.78,
+                          mainAxisExtent: 420,
                         ),
                       ),
                     ),
