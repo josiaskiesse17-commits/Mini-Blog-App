@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/account_page.dart';
+import '../../features/auth/presentation/pages/change_password_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/blog/data/providers/article_repository_provider.dart';
@@ -38,18 +40,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
       GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
+        path: '/account',
+        builder: (context, state) => const AccountPage(),
       ),
       GoRoute(
-        path: '/signup',
-        builder: (context, state) => const SignupPage(),
+        path: '/change-password',
+        builder: (context, state) => const ChangePasswordPage(),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomePage(),
-      ),
+      GoRoute(path: '/home', builder: (context, state) => const HomePage()),
       GoRoute(
         path: '/article/:id',
         builder: (context, state) {
@@ -71,12 +72,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  ref.listen(
-    authStateProvider,
-    (_, _) {
-      router.refresh();
-    },
-  );
+  ref.listen(authStateProvider, (_, _) {
+    router.refresh();
+  });
 
   ref.onDispose(router.dispose);
 
@@ -86,9 +84,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 class _EditArticleLoader extends ConsumerWidget {
   final String articleId;
 
-  const _EditArticleLoader({
-    required this.articleId,
-  });
+  const _EditArticleLoader({required this.articleId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,18 +95,14 @@ class _EditArticleLoader extends ConsumerWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return const Scaffold(
             body: Center(
-              child: Text(
-                'Erreur lors du chargement de l\'article.',
-              ),
+              child: Text('Erreur lors du chargement de l\'article.'),
             ),
           );
         }
@@ -119,9 +111,7 @@ class _EditArticleLoader extends ConsumerWidget {
 
         if (result == null) {
           return const Scaffold(
-            body: Center(
-              child: Text('Article introuvable.'),
-            ),
+            body: Center(child: Text('Article introuvable.')),
           );
         }
 
@@ -129,21 +119,16 @@ class _EditArticleLoader extends ConsumerWidget {
 
         if (failure != null || article == null) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Modifier l\'article'),
-            ),
+            appBar: AppBar(title: const Text('Modifier l\'article')),
             body: Center(
-              child: Text(
-                failure?.message ?? 'Article introuvable.',
-              ),
+              child: Text(failure?.message ?? 'Article introuvable.'),
             ),
           );
         }
 
         final currentUser = ref.read(authStateProvider).value;
 
-        if (currentUser == null ||
-            currentUser.uid != article.authorId) {
+        if (currentUser == null || currentUser.uid != article.authorId) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) {
               context.go('/home');
@@ -151,9 +136,7 @@ class _EditArticleLoader extends ConsumerWidget {
           });
 
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 

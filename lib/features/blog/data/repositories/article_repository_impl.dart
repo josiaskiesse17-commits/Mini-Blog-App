@@ -159,8 +159,14 @@ class ArticleRepositoryImpl implements ArticleRepository {
   }
 
   @override
-  Future<Failure?> updateArticle(Article article) {
-    return _guardVoid(() => _remoteDataSource.updateArticle(article));
+  Future<Failure?> updateArticle(Article article) async {
+    final failure = await _guardVoid(
+      () => _remoteDataSource.updateArticle(article),
+    );
+    if (failure == null) {
+      await _cacheArticleSilently(article);
+    }
+    return failure;
   }
 
   @override

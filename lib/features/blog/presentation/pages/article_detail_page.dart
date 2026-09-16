@@ -6,23 +6,26 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/providers/article_repository_provider.dart';
 import '../providers/article_notifier.dart';
 import '../widgets/article_image.dart';
-import 'edit_article_page.dart';
 
 class ArticleDetailPage extends ConsumerWidget {
-  final String articleId;
-
   const ArticleDetailPage({
     super.key,
     required this.articleId,
   });
 
+  final String articleId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(articleRepositoryProvider);
-    final currentUser = ref.watch(authStateProvider).value;
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Retour',
+          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
         title: const Text('Détails de l\'article'),
       ),
       body: FutureBuilder(
@@ -35,211 +38,306 @@ class ArticleDetailPage extends ConsumerWidget {
           }
 
           if (snapshot.hasError) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Erreur lors du chargement de l\'article.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            return const _ArticleStateMessage(
+              icon: Icons.cloud_off_outlined,
+              message: 'Erreur lors du chargement de l\'article.',
             );
           }
 
           final result = snapshot.data;
 
           if (result == null) {
-            return const Center(
-              child: Text('Article introuvable.'),
+            return const _ArticleStateMessage(
+              icon: Icons.article_outlined,
+              message: 'Article introuvable.',
             );
           }
 
           final (article, failure) = result;
 
-          if (failure != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  failure.message,
-                  textAlign: TextAlign.center,
-                ),
-              ),
+          if (failure != null || article == null) {
+            return _ArticleStateMessage(
+              icon: Icons.article_outlined,
+              message: failure?.message ?? 'Article introuvable.',
             );
           }
 
-          if (article == null) {
-            return const Center(
-              child: Text('Article introuvable.'),
-            );
-          }
+          final currentUser = ref.watch(authStateProvider).value;
 
           final isOwner =
-              currentUser != null &&
-              currentUser.uid == article.authorId;
+              currentUser != null && currentUser.uid == article.authorId;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 900,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ArticleImage(
-                      imageId: article.imageId,
-                      height: 400,
-                      borderRadius: 16,
-                    ),
-                    if (article.imageId != null)
-                      const SizedBox(height: 24),
-
-                    Text(
-                      article.title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.person_outline,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Par ${article.authorName}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    Text(
-                      article.content,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyLarge
-                          ?.copyWith(
-                            height: 1.7,
-                          ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    const Divider(),
-
-                    const SizedBox(height: 24),
-
-                    if (isOwner)
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      EditArticlePage(article: article),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.edit),
-                            label: const Text('Modifier'),
-                          ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              final confirm =
-                                  await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text(
-                                    'Supprimer l\'article',
-                                  ),
-                                  content: const Text(
-                                    'Êtes-vous sûr de vouloir supprimer '
-                                    'cet article ?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Annuler'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text(
-                                        'Supprimer',
-                                        style: TextStyle(
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              if (confirm == true &&
-                                  context.mounted) {
-                                final success = await ref
-                                    .read(
-                                      articleNotifierProvider.notifier,
-                                    )
-                                    .deleteArticle(article.id);
-
-                                if (context.mounted) {
-                                  if (success) {
-                                    context.go('/home');
-                                  } else {
-                                    final errorMessage = ref
-                                            .read(
-                                              articleNotifierProvider,
-                                            )
-                                            .errorMessage ??
-                                        'Erreur lors de la suppression';
-
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Text(errorMessage),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.delete),
-                            label: const Text('Supprimer'),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
+          return _ArticleContent(
+            article: article,
+            isOwner: isOwner,
+            onDelete: () => _deleteArticle(
+              context,
+              ref,
+              article.id,
             ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _deleteArticle(
+    BuildContext context,
+    WidgetRef ref,
+    String id,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Supprimer l\'article'),
+          content: const Text(
+            'Voulez-vous vraiment supprimer cet article ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Supprimer'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    final deleted = await ref
+        .read(articleNotifierProvider.notifier)
+        .deleteArticle(id);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (deleted) {
+      context.go('/home');
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Impossible de supprimer l\'article.',
+        ),
+      ),
+    );
+  }
+}
+
+class _ArticleContent extends StatelessWidget {
+  const _ArticleContent({
+    required this.article,
+    required this.isOwner,
+    required this.onDelete,
+  });
+
+  final dynamic article;
+  final bool isOwner;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 900;
+        final horizontalPadding = isWide ? 32.0 : 16.0;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            24,
+            horizontalPadding,
+            48,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 980,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      isWide ? 24 : 18,
+                    ),
+                    child: ArticleImage(
+                      imageId: article.imageId,
+                      height: isWide ? 430 : 240,
+                      borderRadius: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    article.title,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 17,
+                          backgroundColor:
+                              colors.primary.withValues(alpha: 0.12),
+                          child: Icon(
+                            Icons.person_outline_rounded,
+                            size: 19,
+                            color: colors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Par ${article.authorName}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWide ? 32 : 20,
+                      vertical: isWide ? 30 : 22,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: colors.outlineVariant,
+                      ),
+                    ),
+                    child: Text(
+                      article.content,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        height: 1.8,
+                        fontSize: isWide ? 18 : 16,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (isOwner) ...[
+                    const SizedBox(height: 24),
+                    _OwnerActions(
+                      onEdit: () {
+                        context.push('/edit/${article.id}');
+                      },
+                      onDelete: onDelete,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _OwnerActions extends StatelessWidget {
+  const _OwnerActions({
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            FilledButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Modifier'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Supprimer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArticleStateMessage extends StatelessWidget {
+  const _ArticleStateMessage({
+    required this.icon,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 52,
+              color: colors.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
+            ),
+          ],
+        ),
       ),
     );
   }

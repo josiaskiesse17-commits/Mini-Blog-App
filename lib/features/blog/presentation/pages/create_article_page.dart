@@ -12,86 +12,129 @@ class CreateArticlePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final articleState = ref.watch(articleNotifierProvider);
-    final authState = ref.watch(authStateProvider);
+    final state = ref.watch(articleNotifierProvider);
+    final currentUser = ref.watch(authStateProvider).value;
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Retour',
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
         title: const Text('Créer un article'),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 800,
-              ),
-              child: ArticleForm(
-                isLoading: articleState.isLoading,
-                onSubmit: (title, content, imageId) async {
-                  final user = authState.value;
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 900;
 
-                  if (user == null) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Vous devez être connecté pour créer '
-                            'un article.',
+            return SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                isWide ? 32 : 16,
+                isWide ? 32 : 20,
+                isWide ? 32 : 16,
+                40,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 900,
+                  ),
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(
+                        isWide ? 32 : 20,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Créer un article',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
-                        ),
-                      );
-                    }
-                    return;
-                  }
+                          const SizedBox(height: 28),
+                          ArticleForm(
+                            isLoading: state.isLoading,
+                            onSubmit: (
+                              title,
+                              content,
+                              imageId,
+                            ) async {
+                              if (currentUser == null) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Vous devez être connecté pour créer un article.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                  final now = DateTime.now();
+                              final now = DateTime.now();
 
-                  final newArticle = Article(
-                    id: '',
-                    title: title,
-                    content: content,
-                    authorId: user.uid,
-                    authorName: user.displayName ?? 'Utilisateur',
-                    status: ArticleStatus.published,
-                    createdAt: now,
-                    updatedAt: now,
-                    imageId: imageId,
-                  );
+                              final article = Article(
+                                id: '',
+                                title: title,
+                                content: content,
+                                imageId: imageId,
+                                authorId: currentUser.uid,
+                                authorName:
+                                    currentUser.displayName ?? '',
+                                status: ArticleStatus.published,
+                                createdAt: now,
+                                updatedAt: now,
+                                publishedAt: now,
+                              );
 
-                  final success = await ref
-                      .read(articleNotifierProvider.notifier)
-                      .createArticle(newArticle);
+                              final success = await ref
+                                  .read(
+                                    articleNotifierProvider.notifier,
+                                  )
+                                  .createArticle(article);
 
-                  if (!context.mounted) {
-                    return;
-                  }
+                              if (!context.mounted) {
+                                return;
+                              }
 
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Article créé avec succès !'),
+                              if (success) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Article créé avec succès !',
+                                    ),
+                                  ),
+                                );
+
+                                context.pop(true);
+                              } else {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Impossible de créer l\'article.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                    );
-
-                    context.pop(true);
-                  } else {
-                    final errorMessage =
-                        ref.read(articleNotifierProvider).errorMessage ??
-                        'Erreur lors de la création';
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(errorMessage),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
