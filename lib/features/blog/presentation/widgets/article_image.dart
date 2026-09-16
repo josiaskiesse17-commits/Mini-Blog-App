@@ -26,13 +26,12 @@ class ArticleImage extends ConsumerWidget {
     }
 
     return FutureBuilder<Uint8List?>(
-      future: ref.read(articleImageLocalDataSourceProvider).getImage(imageId!),
+      future: ref
+          .read(articleImageLocalDataSourceProvider)
+          .getImage(imageId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return SizedBox(
-            height: height,
-            child: const Center(child: CircularProgressIndicator()),
-          );
+          return _loading(context);
         }
 
         final bytes = snapshot.data;
@@ -48,27 +47,60 @@ class ArticleImage extends ConsumerWidget {
             width: double.infinity,
             height: height,
             fit: fit,
+            errorBuilder: (_, _, _) => _placeholder(context),
           ),
         );
       },
     );
   }
 
-  Widget _placeholder(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _loading(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        width: double.infinity,
-        height: height,
-        color: colorScheme.surfaceContainerHighest,
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.image_outlined,
-          size: 48,
-          color: colorScheme.onSurfaceVariant,
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: colors.primary,
         ),
+      ),
+    );
+  }
+
+  Widget _placeholder(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_outlined,
+            size: 42,
+            color: colors.onSurfaceVariant,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Image de couverture',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ),
     );
   }
