@@ -137,7 +137,13 @@ class ArticleNotifier extends Notifier<ArticleState> {
       return false;
     }
 
-    await fetchArticles();
+    state = state.copyWith(
+      articles: state.articles
+          .where((article) => article.id != id)
+          .toList(),
+      isLoading: false,
+    );
+
     return true;
   }
 }

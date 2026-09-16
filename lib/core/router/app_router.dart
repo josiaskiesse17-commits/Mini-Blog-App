@@ -140,6 +140,23 @@ class _EditArticleLoader extends ConsumerWidget {
           );
         }
 
+        final currentUser = ref.read(authStateProvider).value;
+
+        if (currentUser == null ||
+            currentUser.uid != article.authorId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              context.go('/home');
+            }
+          });
+
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
         return EditArticlePage(article: article);
       },
     );
